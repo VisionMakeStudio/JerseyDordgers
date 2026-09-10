@@ -1,0 +1,1 @@
+{"name":"jersey-dodgers","private":true,"type":"module","scripts":{"build":"node build.mjs","test":"node --test tests/*.test.mjs"},"dependencies":{"@netlify/blobs":"11.0.3","@netlify/functions":"6.0.0","@netlify/identity":"2.0.0","esbuild":"0.28.2","zod":"4.6.0"}}

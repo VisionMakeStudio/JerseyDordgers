@@ -1,0 +1,48 @@
+[build]
+command = "npm run build"
+publish = "public"
+[functions]
+directory = "netlify/functions"
+node_bundler = "esbuild"
+[[redirects]]
+from = "/admin/*"
+to = "/admin.html"
+status = 200
+[[redirects]]
+from = "/schedule/*"
+to = "/index.html"
+status = 200
+[[redirects]]
+from = "/scores/*"
+to = "/index.html"
+status = 200
+[[redirects]]
+from = "/roster/*"
+to = "/index.html"
+status = 200
+[[redirects]]
+from = "/stats/*"
+to = "/index.html"
+status = 200
+[[redirects]]
+from = "/media/*"
+to = "/index.html"
+status = 200
+[[redirects]]
+from = "/tryouts/*"
+to = "/index.html"
+status = 200
+[[redirects]]
+from = "/standings/*"
+to = "/index.html"
+status = 200
+[[redirects]]
+from = "/game/*"
+to = "/index.html"
+status = 200
+[[headers]]
+for = "/*"
+[headers.values]
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"
+X-Frame-Options = "DENY"
