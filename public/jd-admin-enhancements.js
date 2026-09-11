@@ -88,6 +88,35 @@
         text.append(badge);
       }
     });
+
+    // Keep the three homepage-featured photos pinned at the top of the
+    // current Admin media list, ordered by #1, #2, #3.
+    const list = document.querySelector('#item-list');
+    if (list) {
+      const rows = [...list.querySelectorAll(':scope > .admin-row')];
+      const originalIndex = new Map(rows.map((row, index) => [row, index]));
+
+      rows.sort((a, b) => {
+        const aId = a.querySelector('button[data-edit]')?.dataset.edit || '';
+        const bId = b.querySelector('button[data-edit]')?.dataset.edit || '';
+        const aItem = mediaCache.get(String(aId));
+        const bItem = mediaCache.get(String(bId));
+        const aFeatured = Boolean(aItem?.featured);
+        const bFeatured = Boolean(bItem?.featured);
+
+        if (aFeatured !== bFeatured) return aFeatured ? -1 : 1;
+
+        if (aFeatured && bFeatured) {
+          const aOrder = Number(aItem?.featureOrder || 99);
+          const bOrder = Number(bItem?.featureOrder || 99);
+          if (aOrder !== bOrder) return aOrder - bOrder;
+        }
+
+        return (originalIndex.get(a) || 0) - (originalIndex.get(b) || 0);
+      });
+
+      rows.forEach(row => list.append(row));
+    }
   }
 
   function formIsMedia(form) {
@@ -395,6 +424,18 @@
     if (!formIsMedia(form)) return;
     installFraming(form, mediaId);
     installLargeVideoUpload(form);
+
+    if (form.dataset.jdVideoLinkHelp !== '1') {
+      form.dataset.jdVideoLinkHelp = '1';
+      const link = form.querySelector('[name="link"]');
+      if (link) {
+        const note = document.createElement('small');
+        note.className = 'jd-video-link-help';
+        note.textContent =
+          'For an Instagram Reel/post or YouTube video: choose Category = Video and paste the full link here. It will embed on the website.';
+        link.parentElement?.append(note);
+      }
+    }
   }
 
   // No endless observer and no endless interval.

@@ -393,3 +393,101 @@
     max-height:72vh!important;
   }
 }
+
+
+/* =========================
+   V4 VIDEO-ONLY PRESENTATION
+   ========================= */
+
+/* The media post metadata stays in the DOM so the site can match the post,
+   but public video cards visually show ONLY the video/embed. */
+.media-card.jd-video-only .media-copy,
+.media-card.jd-video-only .jd-video-copy-hidden{
+  display:none!important;
+}
+
+.jd-video-grid{
+  display:grid!important;
+  gap:18px!important;
+  align-items:start!important;
+}
+
+/* A single upload is centered instead of hugging the left side. */
+.jd-video-grid.jd-video-grid-1{
+  grid-template-columns:minmax(280px,760px)!important;
+  justify-content:center!important;
+}
+
+.jd-video-grid.jd-video-grid-2{
+  grid-template-columns:repeat(2,minmax(260px,560px))!important;
+  justify-content:center!important;
+}
+
+.jd-video-grid.jd-video-grid-3plus{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+}
+
+/* One portrait/Reel stays a comfortable phone-video width instead of becoming
+   a giant 9:16 block across the desktop. */
+.jd-video-grid-1 > .jd-video-portrait,
+.jd-video-grid-1 > .jd-video-instagram-post{
+  width:min(100%,430px)!important;
+  justify-self:center!important;
+}
+
+.jd-video-grid-1 > .jd-video-landscape{
+  width:min(100%,760px)!important;
+  justify-self:center!important;
+}
+
+.jd-video-frame-instagram-post{
+  aspect-ratio:4/5!important;
+}
+
+.jd-instagram-frame{
+  background:#000;
+}
+
+.jd-instagram-frame iframe{
+  background:#000;
+}
+
+/* Video player has no extra fake card height beyond its natural ratio. */
+.media-card.jd-video-only{
+  border:1px solid #2c3c50!important;
+  background:#020407!important;
+}
+
+.media-card.jd-video-only .media-video{
+  margin:0!important;
+}
+
+/* Admin helper beneath the link field. */
+.jd-video-link-help{
+  display:block;
+  margin-top:5px;
+  color:#7f94ad;
+  font-size:11px;
+  line-height:1.45;
+}
+
+@media(max-width:900px){
+  .jd-video-grid.jd-video-grid-3plus{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+}
+
+@media(max-width:700px){
+  .jd-video-grid,
+  .jd-video-grid.jd-video-grid-1,
+  .jd-video-grid.jd-video-grid-2,
+  .jd-video-grid.jd-video-grid-3plus{
+    grid-template-columns:1fr!important;
+  }
+
+  .jd-video-grid-1 > .jd-video-portrait,
+  .jd-video-grid-1 > .jd-video-instagram-post,
+  .jd-video-grid-1 > .jd-video-landscape{
+    width:100%!important;
+  }
+}
