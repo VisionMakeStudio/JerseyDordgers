@@ -1,23 +1,47 @@
 (() => {
   'use strict';
 
-  const FOCUS_RE = /\[\[JD_FOCUS:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
+  const FRAME_RE = /\[\[JD_FRAME:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
+  const OLD_FOCUS_RE = /\[\[JD_FOCUS:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
+
   let media = [];
   let mediaById = new Map();
 
-  const clamp = n => Math.max(0, Math.min(100, Number(n) || 50));
+  const clamp = (n, min, max) => Math.max(min, Math.min(max, Number(n) || min));
 
-  function parseFocus(caption = '') {
-    FOCUS_RE.lastIndex = 0;
-    const match = FOCUS_RE.exec(String(caption || ''));
-    FOCUS_RE.lastIndex = 0;
-    return match ? { x: clamp(match[1]), y: clamp(match[2]) } : { x: 50, y: 50 };
+  function parseFrame(caption = '') {
+    FRAME_RE.lastIndex = 0;
+    let match = FRAME_RE.exec(String(caption || ''));
+    FRAME_RE.lastIndex = 0;
+
+    if (match) return {
+      x: clamp(match[1], 0, 100),
+      y: clamp(match[2], 0, 100),
+      zoom: clamp(match[3], .85, 2.5)
+    };
+
+    OLD_FOCUS_RE.lastIndex = 0;
+    match = OLD_FOCUS_RE.exec(String(caption || ''));
+    OLD_FOCUS_RE.lastIndex = 0;
+
+    if (match) return {
+      x: clamp(match[1], 0, 100),
+      y: clamp(match[2], 0, 100),
+      zoom: 1
+    };
+
+    return { x: 50, y: 50, zoom: 1 };
   }
 
-  function stripFocusMarker(html = '') {
-    FOCUS_RE.lastIndex = 0;
-    const clean = String(html || '').replace(FOCUS_RE, '').trim();
-    FOCUS_RE.lastIndex = 0;
+  function stripMarkers(value = '') {
+    FRAME_RE.lastIndex = 0;
+    OLD_FOCUS_RE.lastIndex = 0;
+    const clean = String(value || '')
+      .replace(FRAME_RE, '')
+      .replace(OLD_FOCUS_RE, '')
+      .trim();
+    FRAME_RE.lastIndex = 0;
+    OLD_FOCUS_RE.lastIndex = 0;
     return clean;
   }
 
@@ -33,10 +57,9 @@
     return '';
   }
 
-  function isYouTubeShort(url = '') {
+  function isShort(url = '') {
     try {
-      const u = new URL(url, location.href);
-      return /(^|\.)youtube\.com$/i.test(u.hostname) && /^\/shorts\//.test(u.pathname);
+      return /^\/shorts\//.test(new URL(url, location.href).pathname);
     } catch {
       return false;
     }
@@ -44,7 +67,7 @@
 
   async function loadContent() {
     try {
-      const response = await fetch('/api/content');
+      const response = await fetch('/api/content', { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       media = data.media || [];
@@ -59,98 +82,136 @@
     return media.find(item => item.title === title) || null;
   }
 
-  function setupDirectVideo(video, item) {
-    if (!(video instanceof HTMLVideoElement)) return;
-
-    video.muted = true;
-    video.defaultMuted = true;
+  function makeVideo(src, poster = '') {
+    const video = document.createElement('video');
+    video.className = 'media-video';
+    video.src = src;
+    if (poster) video.poster = poster;
+    video.controls = true;
     video.autoplay = true;
     video.loop = true;
+    video.muted = true;
+    video.defaultMuted = true;
     video.playsInline = true;
-    video.controls = true;
     video.preload = 'metadata';
-
     video.setAttribute('muted', '');
     video.setAttribute('autoplay', '');
     video.setAttribute('loop', '');
     video.setAttribute('playsinline', '');
-
-    const card = video.closest('.media-card');
-    card?.classList.add('jd-video-card');
-
-    const classify = () => {
-      if (!video.videoWidth || !video.videoHeight) return;
-      card?.classList.remove('jd-video-portrait', 'jd-video-landscape', 'jd-video-square');
-      const ratio = video.videoWidth / video.videoHeight;
-      if (ratio < 0.8) card?.classList.add('jd-video-portrait');
-      else if (ratio > 1.2) card?.classList.add('jd-video-landscape');
-      else card?.classList.add('jd-video-square');
-    };
-
-    if (video.readyState >= 1) classify();
-    else video.addEventListener('loadedmetadata', classify, { once: true });
-
-    const play = () => {
-      video.muted = true;
-      video.play().catch(() => {});
-    };
-    if (video.readyState >= 2) play();
-    else video.addEventListener('canplay', play, { once: true });
+    return video;
   }
 
-  function setupYouTube(frame, item) {
-    if (!(frame instanceof HTMLIFrameElement)) return;
-    if (frame.dataset.jdPrepared === '1') return;
+  function makeYouTube(item) {
+    const id = youtubeId(item?.link || '');
+    if (!id) return null;
 
-    const card = frame.closest('.media-card');
-    const wrapper = frame.closest('.video-frame');
-    card?.classList.add('jd-video-card');
+    const wrap = document.createElement('div');
+    wrap.className = `video-frame ${isShort(item.link) ? 'jd-video-frame-portrait' : 'jd-video-frame-landscape'}`;
 
-    const id = youtubeId(item?.link || '') || (() => {
-      try {
-        return new URL(frame.src).pathname.match(/\/embed\/([^/?]+)/)?.[1] || '';
-      } catch {
-        return '';
+    const frame = document.createElement('iframe');
+    const params = new URLSearchParams({
+      autoplay: '1',
+      mute: '1',
+      loop: '1',
+      playlist: id,
+      playsinline: '1',
+      rel: '0'
+    });
+
+    frame.src = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?${params}`;
+    frame.title = item.title || 'Jersey Dodgers video';
+    frame.loading = 'lazy';
+    frame.allow =
+      'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+    frame.allowFullscreen = true;
+
+    wrap.append(frame);
+    return wrap;
+  }
+
+  function ensurePlayer(card, item) {
+    if (!item || item.category !== 'Video') return;
+
+    const copy = card.querySelector('.media-copy');
+    if (!copy) return;
+
+    let video = card.querySelector('video.media-video');
+    let frame = card.querySelector('.video-frame');
+
+    // This fixes the exact empty Video card shown in the screenshot:
+    // if the core renderer did not create a player, create it from the saved media item.
+    if (!video && !frame) {
+      if (item.video) {
+        video = makeVideo(item.video, item.image || '');
+        card.insertBefore(video, copy);
+      } else {
+        const direct = /\.(mp4|webm)(?:$|\?)/i.test(item.link || '');
+        if (direct) {
+          video = makeVideo(item.link, item.image || '');
+          card.insertBefore(video, copy);
+        } else {
+          frame = makeYouTube(item);
+          if (frame) card.insertBefore(frame, copy);
+        }
       }
-    })();
-
-    if (isYouTubeShort(item?.link || '')) {
-      card?.classList.add('jd-video-portrait');
-      wrapper?.classList.add('jd-video-frame-portrait');
-    } else {
-      card?.classList.add('jd-video-landscape');
-      wrapper?.classList.add('jd-video-frame-landscape');
     }
 
-    if (!id) return;
+    card.classList.add('jd-video-card');
 
-    try {
-      const url = new URL(frame.src, location.href);
-      url.searchParams.set('autoplay', '1');
-      url.searchParams.set('mute', '1');
-      url.searchParams.set('loop', '1');
-      url.searchParams.set('playlist', id);
-      url.searchParams.set('playsinline', '1');
-      url.searchParams.set('rel', '0');
-      frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-      frame.dataset.jdPrepared = '1';
-      frame.src = url.toString();
-    } catch {}
+    if (video) {
+      video.muted = true;
+      video.defaultMuted = true;
+      video.autoplay = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.controls = true;
+
+      const classify = () => {
+        card.classList.remove('jd-video-portrait', 'jd-video-landscape', 'jd-video-square');
+        if (!video.videoWidth || !video.videoHeight) return;
+        const ratio = video.videoWidth / video.videoHeight;
+        if (ratio < .8) card.classList.add('jd-video-portrait');
+        else if (ratio > 1.2) card.classList.add('jd-video-landscape');
+        else card.classList.add('jd-video-square');
+      };
+
+      if (video.readyState >= 1) classify();
+      else video.addEventListener('loadedmetadata', classify, { once: true });
+
+      const play = () => {
+        video.muted = true;
+        video.play().catch(() => {});
+      };
+
+      if (video.readyState >= 2) play();
+      else video.addEventListener('canplay', play, { once: true });
+    }
+
+    if (!video && !frame) {
+      // Do not leave a mystery blank rectangle. This tells the admin exactly
+      // why it is blank if a Video post was saved without an uploaded file/link.
+      if (!card.querySelector('.jd-video-missing')) {
+        const missing = document.createElement('div');
+        missing.className = 'jd-video-missing';
+        missing.innerHTML =
+          '<strong>VIDEO NOT ATTACHED</strong><span>Edit this post in Admin and upload the MP4/WebM again or add a YouTube link.</span>';
+        card.insertBefore(missing, copy);
+      }
+    }
   }
 
   function enhanceVideos() {
     document.querySelectorAll('.media-card').forEach(card => {
       const item = itemForCard(card);
-      const video = card.querySelector('video.media-video');
-      const frame = card.querySelector('.video-frame iframe');
+      if (item?.category === 'Video') ensurePlayer(card, item);
 
-      if (video) setupDirectVideo(video, item);
-      if (frame) setupYouTube(frame, item);
-
-      // Keep the framing marker invisible if it was stored in the caption.
       const caption = card.querySelector('.media-copy p');
-      if (caption) caption.innerHTML = stripFocusMarker(caption.innerHTML);
+      if (caption) caption.innerHTML = stripMarkers(caption.innerHTML);
     });
+  }
+
+  function backgroundValue(url) {
+    return `url("${String(url || '').replace(/"/g, '\\"')}")`;
   }
 
   function enhanceFeaturedPhotos() {
@@ -158,20 +219,28 @@
       const item = mediaById.get(String(button.dataset.photo || ''));
       const image = button.querySelector('img');
       if (!image || !item) return;
-      const focus = parseFocus(item.caption || '');
-      image.style.objectPosition = `${focus.x}% ${focus.y}%`;
+
+      const frame = parseFrame(item.caption || '');
+
+      button.classList.add('jd-framed-photo');
+      button.style.setProperty('--jd-photo-bg', backgroundValue(item.image));
+      image.style.setProperty('--jd-frame-zoom', frame.zoom);
+      image.style.setProperty('--jd-frame-x', `${frame.x}%`);
+      image.style.setProperty('--jd-frame-y', `${frame.y}%`);
     });
   }
 
   function fixLightbox() {
     const image = document.querySelector('#lightbox-content > img');
     if (!image) return;
+
     image.style.width = 'auto';
     image.style.height = 'auto';
     image.style.maxWidth = '100%';
     image.style.maxHeight = '78vh';
     image.style.objectFit = 'contain';
     image.style.objectPosition = 'center center';
+    image.style.transform = 'none';
   }
 
   function enhanceNow() {
@@ -180,10 +249,8 @@
     fixLightbox();
   }
 
-  // The site's main module renders asynchronously. Use a short, bounded retry
-  // window rather than an endless DOM observer.
   function scheduleEnhance() {
-    [0, 100, 250, 500, 900, 1500, 2500].forEach(delay => setTimeout(enhanceNow, delay));
+    [0, 80, 180, 350, 650, 1100, 1800, 2800].forEach(delay => setTimeout(enhanceNow, delay));
   }
 
   document.addEventListener('click', event => {
@@ -191,6 +258,7 @@
       setTimeout(fixLightbox, 0);
       setTimeout(fixLightbox, 80);
     }
+
     if (event.target.closest('[data-page]')) scheduleEnhance();
   });
 

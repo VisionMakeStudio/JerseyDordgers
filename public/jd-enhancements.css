@@ -1,19 +1,21 @@
-/* Jersey Dodgers — safe media enhancements v2 */
+/* Jersey Dodgers media + featured framing v3 */
 
-/* -------------------------------------------------------
-   VIDEO
-   Let uploaded videos use their real ratio instead of forcing
-   every clip into the same landscape rectangle.
--------------------------------------------------------- */
+/* =========================
+   VIDEO CARDS
+   ========================= */
 .media-grid{
   align-items:start;
 }
+
 .media-card.jd-video-card{
   overflow:hidden;
+  background:#111924;
 }
+
 .media-card.jd-video-card .media-copy{
   border-top:1px solid #253448;
 }
+
 .media-video{
   display:block!important;
   width:100%!important;
@@ -25,18 +27,24 @@
   object-position:center center!important;
   background:#020407;
 }
+
 .video-frame{
   position:relative;
   width:100%;
   overflow:hidden;
   background:#020407;
 }
-.video-frame.jd-video-frame-landscape{
+
+.video-frame.jd-video-frame-landscape,
+.jd-video-landscape .video-frame{
   aspect-ratio:16/9!important;
 }
-.video-frame.jd-video-frame-portrait{
+
+.video-frame.jd-video-frame-portrait,
+.jd-video-portrait .video-frame{
   aspect-ratio:9/16!important;
 }
+
 .video-frame iframe{
   position:absolute;
   inset:0;
@@ -46,40 +54,92 @@
   border:0;
 }
 
-/* A portrait clip fills the card width, so you don't get a tiny
-   vertical video floating in a huge 16:9 black box. */
-.jd-video-portrait .media-video{
-  width:100%!important;
-  height:auto!important;
-}
-.latest-video-grid .media-grid,
-body:has(.video-page-empty) .media-grid{
-  align-items:start;
+.jd-video-missing{
+  display:grid;
+  place-items:center;
+  gap:8px;
+  min-height:210px;
+  padding:24px;
+  text-align:center;
+  background:linear-gradient(145deg,#0a1018,#111b28);
+  border-bottom:1px solid #28384c;
 }
 
-/* -------------------------------------------------------
+.jd-video-missing strong{
+  color:#ff7c8d;
+  font-size:11px;
+  letter-spacing:.12em;
+}
+
+.jd-video-missing span{
+  max-width:330px;
+  color:#91a0b5;
+  font-size:12px;
+}
+
+/* =========================
    HOMEPAGE FEATURED PHOTOS
--------------------------------------------------------- */
+   ========================= */
 .clubhouse-gallery{
   align-items:stretch;
 }
+
 .clubhouse-photo,
 .clubhouse-photo:first-child{
+  position:relative;
   height:auto!important;
   aspect-ratio:4/3!important;
-}
-.clubhouse-photo img{
-  display:block;
-  width:100%;
-  height:100%;
-  object-fit:cover!important;
+  overflow:hidden;
+  background:#07101a;
+  isolation:isolate;
 }
 
-/* Clicking a photo must show the entire original file. */
+.clubhouse-photo.jd-framed-photo::before{
+  content:'';
+  position:absolute;
+  z-index:0;
+  inset:-10%;
+  background-image:var(--jd-photo-bg);
+  background-size:cover;
+  background-position:center;
+  filter:blur(24px) brightness(.48) saturate(.9);
+  transform:scale(1.12);
+}
+
+.clubhouse-photo.jd-framed-photo::after{
+  content:'';
+  position:absolute;
+  z-index:1;
+  inset:0;
+  background:linear-gradient(180deg,#00102022,#00102044);
+  pointer-events:none;
+}
+
+.clubhouse-photo.jd-framed-photo img{
+  position:absolute;
+  z-index:2;
+  inset:0;
+  display:block;
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+  transform:scale(var(--jd-frame-zoom,1));
+  transform-origin:var(--jd-frame-x,50%) var(--jd-frame-y,50%);
+  transition:transform .2s ease;
+}
+
+/* keep hover subtle; don't fight the saved framing zoom */
+.clubhouse-photo.jd-framed-photo:hover img{
+  transform:scale(calc(var(--jd-frame-zoom,1) * 1.015));
+}
+
+/* Expanded image = complete original */
 #lightbox{
   width:min(1120px,calc(100% - 24px))!important;
   max-height:95vh!important;
 }
+
 #lightbox-content > img{
   display:block!important;
   width:auto!important;
@@ -89,15 +149,17 @@ body:has(.video-page-empty) .media-grid{
   margin:0 auto!important;
   object-fit:contain!important;
   object-position:center center!important;
+  transform:none!important;
   background:#060a10;
 }
 
-/* -------------------------------------------------------
+/* =========================
    ADMIN FEATURED INDICATOR
--------------------------------------------------------- */
+   ========================= */
 .admin-media-thumb{
   position:relative;
 }
+
 .jd-featured-dot{
   position:absolute;
   z-index:4;
@@ -110,9 +172,11 @@ body:has(.video-page-empty) .media-grid{
   border:2px solid #0b121b;
   box-shadow:0 0 0 2px #35da7338,0 0 14px #35da7380;
 }
+
 .jd-featured-row{
   border-left-color:#35da73!important;
 }
+
 .jd-featured-badge{
   display:inline-flex;
   align-items:center;
@@ -128,9 +192,9 @@ body:has(.video-page-empty) .media-grid{
   letter-spacing:.08em;
 }
 
-/* -------------------------------------------------------
-   ADMIN DRAG-TO-FRAME
--------------------------------------------------------- */
+/* =========================
+   ADMIN FRAME TOOL
+   ========================= */
 .jd-framing-panel{
   grid-column:1/-1;
   padding:18px;
@@ -138,16 +202,19 @@ body:has(.video-page-empty) .media-grid{
   border-radius:8px;
   background:linear-gradient(145deg,#0b131e,#101b29);
 }
+
 .jd-framing-heading{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
   gap:18px;
 }
+
 .jd-framing-heading h3{
   margin:5px 0 0;
   font-size:20px;
 }
+
 .jd-framing-heading button{
   flex:0 0 auto;
   padding:8px 11px;
@@ -156,22 +223,26 @@ body:has(.video-page-empty) .media-grid{
   border:1px solid #45607e;
   border-radius:5px;
 }
+
 .jd-framing-panel > p{
-  max-width:720px;
+  max-width:760px;
   margin:10px 0 16px;
   color:#9dabbc;
   font-size:12px;
 }
+
 .jd-framing-workspace{
   display:grid;
   grid-template-columns:minmax(230px,360px) minmax(210px,1fr);
   gap:22px;
   align-items:center;
 }
+
 .jd-framing-stage{
+  --jd-preview-image:none;
   position:relative;
   width:100%;
-  aspect-ratio:1/1;
+  aspect-ratio:4/3;
   overflow:hidden;
   border:2px solid #496683;
   border-radius:7px;
@@ -179,28 +250,51 @@ body:has(.video-page-empty) .media-grid{
   cursor:grab;
   touch-action:none;
   user-select:none;
+  isolation:isolate;
 }
+
+.jd-framing-stage::before{
+  content:'';
+  position:absolute;
+  z-index:0;
+  inset:-12%;
+  background-image:var(--jd-preview-image);
+  background-size:cover;
+  background-position:center;
+  filter:blur(22px) brightness(.5);
+  transform:scale(1.12);
+}
+
 .jd-framing-stage.is-dragging{
   cursor:grabbing;
   border-color:#168bff;
   box-shadow:0 0 0 3px #168bff2e;
 }
+
 .jd-framing-stage img{
+  position:absolute;
+  z-index:2;
+  inset:0;
   display:block;
   width:100%;
   height:100%;
-  object-fit:cover;
+  object-fit:contain!important;
   pointer-events:none;
   user-select:none;
+  transform:scale(var(--jd-frame-zoom,1));
+  transform-origin:var(--jd-frame-x,50%) var(--jd-frame-y,50%);
 }
+
 .jd-framing-crosshair{
   position:absolute;
+  z-index:3;
   inset:0;
   pointer-events:none;
   background:
     linear-gradient(90deg,transparent calc(50% - .5px),#ffffff55 50%,transparent calc(50% + .5px)),
     linear-gradient(0deg,transparent calc(50% - .5px),#ffffff55 50%,transparent calc(50% + .5px));
 }
+
 .jd-framing-crosshair::after{
   content:'';
   position:absolute;
@@ -213,8 +307,10 @@ body:has(.video-page-empty) .media-grid{
   transform:translate(-50%,-50%);
   box-shadow:0 0 0 4px #168bff5c;
 }
+
 .jd-drag-tip{
   position:absolute;
+  z-index:4;
   left:10px;
   bottom:10px;
   padding:5px 7px;
@@ -227,36 +323,41 @@ body:has(.video-page-empty) .media-grid{
   letter-spacing:.12em;
   pointer-events:none;
 }
+
 .jd-framing-details{
   display:grid;
   gap:13px;
 }
-.jd-framing-details > strong{
-  font-size:16px;
-}
-.jd-framing-details > small{
-  color:#8ea0b7;
-  line-height:1.5;
-}
+
 .jd-framing-details label{
   display:grid;
   gap:7px;
   color:#b9c8d9;
   font-size:12px;
 }
+
 .jd-framing-details input[type=range]{
   width:100%;
   min-height:0;
   padding:0;
   accent-color:#168bff;
 }
+
 .jd-focus-readout{
   color:#8fc6ff;
   font-size:11px;
+  font-weight:700;
 }
+
+.jd-framing-details > small{
+  color:#8193aa;
+  line-height:1.5;
+}
+
 .jd-no-feature-image .jd-framing-stage::after{
   content:'Upload or select a photo first';
   position:absolute;
+  z-index:5;
   inset:0;
   display:grid;
   place-items:center;
@@ -266,6 +367,7 @@ body:has(.video-page-empty) .media-grid{
   background:#070c12;
   font-size:12px;
 }
+
 .jd-no-feature-image .jd-framing-stage img,
 .jd-no-feature-image .jd-framing-crosshair,
 .jd-no-feature-image .jd-drag-tip{
@@ -278,12 +380,15 @@ body:has(.video-page-empty) .media-grid{
     height:auto!important;
     aspect-ratio:4/3!important;
   }
+
   .jd-framing-workspace{
     grid-template-columns:1fr;
   }
+
   .jd-framing-panel{
     padding:14px;
   }
+
   #lightbox-content > img{
     max-height:72vh!important;
   }
