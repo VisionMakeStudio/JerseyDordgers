@@ -5,16 +5,16 @@ const image=z.string().max(2000).refine(v=>!v||/^\/assets\/[a-zA-Z0-9_.-]+$/.tes
 const metric=z.string().max(30).refine(v=>!v||v==='-'||/^\d*(\.\d+)?$/.test(v),'Use a number or dash');
 const stats=z.record(z.string().max(40),metric);
 export const schemas={
- settings:z.object({teamName:short.min(1),founded:short,tagline:short,heroTitle:short,heroText:text,heroImage:image,logo:image,scriptLogo:image,leagueName:short,leagueLogo:image,instagram:link,youtube:link,contactEmail:z.union([z.literal(''),z.email()]),currentSeason:id,championshipTitle:short,championshipText:text,championshipImage:image,tryoutsTitle:short,tryoutsText:text,tryoutsLink:link,sponsorTitle:short,sponsorText:text,footerText:short}),
+ settings:z.object({teamName:short.min(1),founded:short,tagline:short,heroTitle:short,heroText:text,heroImage:image,logo:image,scriptLogo:image,leagueName:short,leagueLogo:image,instagram:link,youtube:link,contactEmail:z.union([z.literal(''),z.email()]),applicationEmail:z.union([z.literal(''),z.email()]).default(''),currentSeason:id,championshipTitle:short,championshipText:text,championshipImage:image,tryoutsTitle:short,tryoutsText:text,tryoutsLink:link,sponsorTitle:short,sponsorText:text,footerText:short}),
  seasons:z.object({id,name:short.min(1),status:z.enum(['active','archived','upcoming']),note:text}),
  fields:z.object({id,name:short.min(1),address:short,mapsUrl:link,notes:text}),
  teams:z.object({id,name:short.min(1),abbreviation:z.string().max(5),logo:image}),
- games:z.object({id,season:id,opponent:id,field:id,date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),time:z.string().regex(/^\d{2}:\d{2}$/),timezone:z.enum(['America/New_York']),home:z.boolean(),status:z.enum(['scheduled','final','postponed','cancelled']),ourScore:z.number().int().min(0).max(200).nullable(),theirScore:z.number().int().min(0).max(200).nullable(),gameLink:link,recap:text,weather:short}).refine(g=>g.status!=='final'||(g.ourScore!==null&&g.theirScore!==null),'Final games need both scores'),
+ games:z.object({id,season:id,opponent:id,field:id,date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),time:z.string().regex(/^\d{2}:\d{2}$/),timezone:z.enum(['America/New_York']),home:z.boolean(),status:z.enum(['scheduled','live','final','postponed','cancelled']),ourScore:z.number().int().min(0).max(200).nullable(),theirScore:z.number().int().min(0).max(200).nullable(),gameLink:link,recap:text,weather:short}).refine(g=>g.status!=='final'||(g.ourScore!==null&&g.theirScore!==null),'Final games need both scores'),
  players:z.object({id,name:short.min(1),number:z.string().max(10),position:short,bats:short,throws:short,bio:text,photo:image,active:z.boolean()}),
  stats:z.object({id,season:id,player:id,bat:stats,pitch:stats,fielding:stats,source:short}),
  standings:z.object({id,season:id,team:id,w:z.number().int().nonnegative(),l:z.number().int().nonnegative(),t:z.number().int().nonnegative(),pct:metric,gb:metric,rs:z.number().int().nonnegative(),ra:z.number().int().nonnegative(),streak:short,home:short,away:short,order:z.number().int().nonnegative(),source:short}),
- media:z.object({id,title:short.min(1),caption:text,image,link,category:z.enum(['Photos','News','Video']),date:z.string().max(10),published:z.boolean()}),
- sponsors:z.object({id,name:short.min(1),logo:image,link,description:text,active:z.boolean()}),
+ media:z.object({id,title:short.min(1),caption:text,image,link,category:z.enum(['Photos','News','Video','Instagram']),date:z.string().max(10),published:z.boolean()}),
+ sponsors:z.object({id,name:short.min(1),logo:image,link,buttonLabel:short.default('Visit sponsor'),description:text,active:z.boolean()}),
  achievements:z.object({id,year:z.string().max(10),title:short.min(1),organization:short}),
  spotlights:z.object({id,season:id,player:id,type:z.enum(['Player of the Week','Game Highlight']),title:short.min(1),summary:text,statLine:short,photo:image,date:z.string().max(10),published:z.boolean(),order:z.number().int().nonnegative()})
 };
@@ -30,4 +30,4 @@ export const contentSchema=z.object({settings:schemas.settings,seasons:z.array(s
  const keys=d.stats.map(s=>s.season+':'+s.player);if(new Set(keys).size!==keys.length)fail('Only one stats entry per player and season is allowed');
 });
 export function canEdit(user,adminEmail){return Boolean(user?.id&&adminEmail&&user.email?.toLowerCase()===adminEmail.toLowerCase())}
-export function publicContent(data){return {...data,media:data.media.filter(x=>x.published),sponsors:data.sponsors.filter(x=>x.active),spotlights:data.spotlights.filter(x=>x.published)}}
+export function publicContent(data){const normalized=contentSchema.parse(data);return {...normalized,media:normalized.media.filter(x=>x.published),sponsors:normalized.sponsors.filter(x=>x.active),spotlights:normalized.spotlights.filter(x=>x.published)}}

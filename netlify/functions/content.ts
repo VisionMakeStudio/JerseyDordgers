@@ -11,7 +11,7 @@ export default async(req,context)=>{
   if(req.method==='GET'&&path==='/api/content'){const record=await store.get('published',{type:'json'});return respond(publicContent(record?.data||seed))}
   const user=await getUser();
   if(!canEdit(user,Netlify.env.get('DODGERS_ADMIN_EMAIL')))return respond({error:'Administrator sign-in required.'},403);
-  if(req.method==='GET'){const record=await store.get('published',{type:'json'});return respond(record||{revision:'initial',data:seed})}
+  if(req.method==='GET'){const record=await store.get('published',{type:'json'});return respond(record?{...record,data:contentSchema.parse(record.data)}:{revision:'initial',data:contentSchema.parse(seed)})}
   if(req.method!=='PUT')return respond({error:'Method not allowed'},405);
   verifyRequestOrigin(req);
   if(Number(req.headers.get('content-length')||0)>4000000)return respond({error:'Content too large'},413);
