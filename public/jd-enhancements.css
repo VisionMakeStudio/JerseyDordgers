@@ -657,3 +657,326 @@
     justify-self:center!important;
   }
 }
+
+
+/* ======================================================
+   V6 HOMEPAGE VIDEO FEATURE
+   ====================================================== */
+
+.jd-home-videos{
+  margin:38px 0 44px;
+}
+
+.jd-video-section-head{
+  margin-bottom:18px;
+}
+
+.jd-home-video-grid{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:12px!important;
+  align-items:start;
+}
+
+.jd-home-video-card{
+  aspect-ratio:4/5!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+}
+
+.jd-home-video-card .jd-video-stage,
+.jd-home-video-card .jd-video-missing{
+  width:100%;
+  height:100%;
+}
+
+/* ======================================================
+   V6 CLEAN MEDIA PHOTO CARDS
+   ====================================================== */
+
+.media-card.jd-clean-photo-card{
+  background:transparent!important;
+  border:0!important;
+  overflow:visible!important;
+}
+
+.jd-clean-photo-card .photo-button{
+  overflow:hidden;
+  border:1px solid #2b4562;
+  background:#07111d;
+  aspect-ratio:4/5;
+}
+
+.jd-clean-photo-card .photo-button img{
+  display:block;
+  width:100%!important;
+  height:100%!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  background:#07111d;
+}
+
+.jd-clean-photo-card .photo-button{
+  position:relative;
+  isolation:isolate;
+}
+
+/* subtle photo-like fill behind contained image */
+.jd-clean-photo-card .photo-button::before{
+  content:'';
+  position:absolute;
+  inset:-12%;
+  z-index:0;
+  background-image:var(--jd-media-bg);
+  background-size:cover;
+  background-position:center;
+  filter:blur(24px) brightness(.48);
+  transform:scale(1.12);
+}
+
+.jd-clean-photo-card .photo-button img{
+  position:relative;
+  z-index:1;
+}
+
+.jd-photo-credit-compact{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-top:9px;
+  color:#91a5bc;
+  font-size:10px;
+  line-height:1.15;
+}
+
+.jd-photo-credit-compact:hover{
+  color:#8bc5ff;
+}
+
+.jd-photo-credit-icon{
+  display:grid;
+  place-items:center;
+  width:18px;
+  height:18px;
+  border:1px solid #45617f;
+  border-radius:50%;
+  color:#8bc5ff;
+  font-size:11px;
+}
+
+.jd-photo-credit-compact span:last-child{
+  display:grid;
+  gap:1px;
+}
+
+.jd-photo-credit-compact small{
+  font-size:7px;
+  letter-spacing:.1em;
+  color:#6f8298;
+}
+
+.jd-photo-credit-compact strong{
+  font-size:10px;
+  font-weight:700;
+  color:#a9bad0;
+}
+
+/* ======================================================
+   V6 ROSTER CARDS
+   ====================================================== */
+
+.roster-grid{
+  gap:16px!important;
+}
+
+.player-card.jd-player-card{
+  position:relative;
+  overflow:hidden;
+  display:grid;
+  grid-template-rows:auto auto;
+  background:#111924;
+  border:1px solid #293647;
+  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
+}
+
+.player-card.jd-player-card:hover{
+  transform:translateY(-3px);
+  border-color:#47729f;
+  box-shadow:0 12px 28px #0007;
+}
+
+.jd-player-image{
+  position:relative;
+  aspect-ratio:4/5;
+  width:100%;
+  overflow:hidden;
+  background:linear-gradient(120deg,#103a65,#101d30);
+}
+
+.jd-player-photo{
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  object-fit:cover!important;
+  object-position:center!important;
+}
+
+/* Since Admin already outputs a 4:5 crop, this 4:5 display preserves it. */
+.jd-player-placeholder{
+  width:100%!important;
+  height:100%!important;
+  display:grid!important;
+  place-items:center;
+  background:linear-gradient(120deg,#103a65,#101d30)!important;
+  font:italic clamp(64px,7vw,104px)/1 Impact,'Arial Narrow',sans-serif!important;
+  color:#9dc8ff!important;
+}
+
+.jd-player-info{
+  position:relative;
+  min-height:100px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  padding:18px 17px 16px 108px;
+  background:
+    linear-gradient(90deg,#111924 0%,#111924 62%,#0e1621 100%);
+  border-top:1px solid #26384c;
+  isolation:isolate;
+}
+
+.jd-player-number-bg{
+  position:absolute;
+  z-index:0;
+  left:-10px;
+  bottom:-18px;
+  font:italic clamp(92px,8vw,138px)/.72 Impact,'Arial Narrow',sans-serif;
+  letter-spacing:-7px;
+  color:transparent;
+  background:linear-gradient(180deg,#9dc8ff 0%,#6385b2 42%,#111924 95%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  opacity:.82;
+  pointer-events:none;
+  user-select:none;
+}
+
+.jd-player-text{
+  position:relative;
+  z-index:2;
+  min-width:0;
+  width:100%;
+  display:grid;
+  gap:8px;
+}
+
+.jd-player-name-line{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  flex-wrap:wrap;
+  min-width:0;
+}
+
+.jd-player-name{
+  min-width:0;
+  color:#f5f7fc;
+  font-size:18px;
+  line-height:1.05;
+  font-weight:800;
+  letter-spacing:-.25px;
+}
+
+.jd-player-meta{
+  color:#9dc8ff;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.04em;
+  white-space:nowrap;
+}
+
+.jd-player-profile-link{
+  color:#7f91a7;
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+/* ======================================================
+   RESPONSIVE
+   ====================================================== */
+
+@media(max-width:1000px){
+  .jd-home-video-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+
+  .jd-player-info{
+    padding-left:92px;
+  }
+
+  .jd-player-number-bg{
+    font-size:106px;
+  }
+}
+
+@media(max-width:700px){
+  .jd-home-videos{
+    margin-top:30px;
+    overflow:visible;
+  }
+
+  .jd-home-video-grid{
+    display:flex!important;
+    overflow-x:auto;
+    gap:10px!important;
+    scroll-snap-type:x mandatory;
+    scrollbar-width:none;
+    padding-bottom:4px;
+  }
+
+  .jd-home-video-grid::-webkit-scrollbar{
+    display:none;
+  }
+
+  .jd-home-video-grid > .media-card{
+    flex:0 0 min(78vw,330px);
+    scroll-snap-align:start;
+  }
+
+  .jd-clean-photo-card .photo-button{
+    aspect-ratio:4/5;
+  }
+
+  .roster-grid{
+    grid-template-columns:1fr 1fr!important;
+    gap:10px!important;
+  }
+
+  .jd-player-info{
+    min-height:78px;
+    padding:13px 10px 12px 62px;
+  }
+
+  .jd-player-number-bg{
+    left:-7px;
+    bottom:-10px;
+    font-size:78px;
+    letter-spacing:-4px;
+  }
+
+  .jd-player-name{
+    font-size:14px;
+  }
+
+  .jd-player-meta{
+    font-size:9px;
+  }
+
+  .jd-player-profile-link{
+    font-size:7px;
+  }
+}

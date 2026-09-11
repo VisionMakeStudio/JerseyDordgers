@@ -6,6 +6,7 @@
 
   let media = [];
   let mediaById = new Map();
+  let rosterPlayers = [];
 
   const clamp = (n, min, max) => Math.max(min, Math.min(max, Number(n) || min));
 
@@ -126,6 +127,9 @@
       const data = await response.json();
       media = data.media || [];
       mediaById = new Map(media.map(item => [String(item.id), item]));
+      rosterPlayers = data.players || [];
+      installRosterPlayerMap();
+      window.__jdRosterPlayerMap = new Map(rosterPlayers.map(item => [String(item.id), item]));
       scheduleEnhance();
     } catch {}
   }
@@ -344,6 +348,199 @@
     }
   }
 
+
+  function escapeHtml(value = '') {
+    return String(value).replace(/[&<>"']/g, char => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[char]));
+  }
+
+  function photographerCreditMarkup(item) {
+    if (!item?.showPhotographerCredit || (!item.photographerName && !item.photographerInstagram)) return '';
+
+    const name = escapeHtml(item.photographerName || 'Photographer');
+    const instagram = String(item.photographerInstagram || '').trim();
+
+    const inside = `
+      <span class="jd-photo-credit-icon" aria-hidden="true">◎</span>
+      <span><small>PHOTOGRAPHY BY</small><strong>${name}</strong></span>
+    `;
+
+    return instagram
+      ? `<a class="jd-photo-credit-compact" href="${escapeHtml(instagram)}" target="_blank" rel="noopener">${inside}</a>`
+      : `<div class="jd-photo-credit-compact">${inside}</div>`;
+  }
+
+  function latestVideoItems(limit = 3) {
+    return [...media]
+      .filter(item => item?.category === 'Video')
+      .sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0))
+      .slice(0, limit);
+  }
+
+  function makeHomepageVideoCard(item) {
+    const card = document.createElement('article');
+    card.className = 'media-card jd-video-card jd-video-only jd-home-video-card';
+
+    const copy = document.createElement('div');
+    copy.className = 'media-copy jd-video-copy-hidden';
+    copy.innerHTML = `<h3>${escapeHtml(item.title || 'Jersey Dodgers video')}</h3>`;
+    card.append(copy);
+
+    ensurePlayer(card, item);
+    return card;
+  }
+
+  function installHomepageVideoSection() {
+    const watch = document.querySelector('.watch-section');
+    if (!watch) return;
+
+    let section = document.querySelector('.jd-home-videos');
+
+    const videos = latestVideoItems(3);
+
+    if (!videos.length) {
+      section?.remove();
+      return;
+    }
+
+    if (!section) {
+      section = document.createElement('section');
+      section.className = 'jd-home-videos';
+      watch.insertAdjacentElement('afterend', section);
+    }
+
+    const signature = videos.map(v => v.id).join('|');
+    if (section.dataset.jdSignature === signature) return;
+    section.dataset.jdSignature = signature;
+
+    section.innerHTML = `
+      <div class="section-head jd-video-section-head">
+        <div>
+          <span class="eyebrow">DODGERS MEDIA</span>
+          <h2>LATEST VIDEOS</h2>
+        </div>
+        <a href="/videos/">All videos</a>
+      </div>
+      <div class="jd-home-video-grid"></div>
+    `;
+
+    const grid = section.querySelector('.jd-home-video-grid');
+    videos.forEach(item => grid.append(makeHomepageVideoCard(item)));
+
+    updateVideoGrid(grid);
+  }
+
+  function cleanMediaPhotoCards() {
+    const route = location.pathname.split('/').filter(Boolean)[0] || '';
+    if (route !== 'media') return;
+
+    document.querySelectorAll('.media-grid .media-card').forEach(card => {
+      const title = card.querySelector('.media-copy h3')?.textContent?.trim();
+      if (!title) return;
+
+      const item = media.find(entry => entry.title === title);
+      if (!item || item.category === 'Video') return;
+
+      const photoButton = card.querySelector('.photo-button');
+      if (!photoButton || !item.image) return;
+
+      card.classList.add('jd-clean-photo-card');
+      photoButton.style.setProperty('--jd-media-bg', backgroundValue(item.image));
+
+      let credit = card.querySelector('.jd-photo-credit-compact');
+      if (!credit) {
+        const markup = photographerCreditMarkup(item);
+        if (markup) {
+          card.insertAdjacentHTML('beforeend', markup);
+        }
+      }
+
+      card.querySelector('.media-copy')?.remove();
+    });
+  }
+
+  function redesignRosterCards() {
+    const route = location.pathname.split('/').filter(Boolean)[0] || '';
+    if (route !== 'roster') return;
+
+    document.querySelectorAll('.roster-grid .player-card').forEach(card => {
+      if (card.dataset.jdRosterReady === '1') return;
+
+      const href = card.getAttribute('href') || '';
+      const playerId = href.match(/\/roster\/([^/]+)\//)?.[1];
+      if (!playerId) return;
+
+      const playerItem = window.__jdRosterPlayerMap?.get?.(playerId);
+      if (!playerItem) return;
+
+      card.dataset.jdRosterReady = '1';
+      card.classList.add('jd-player-card');
+
+      const existingImage = card.querySelector(':scope > img');
+      const existingNumber = card.querySelector(':scope > .player-number');
+
+      const imageWrap = document.createElement('div');
+      imageWrap.className = 'jd-player-image';
+
+      if (existingImage) {
+        existingImage.remove();
+        imageWrap.append(existingImage);
+        existingImage.classList.add('jd-player-photo');
+      } else if (existingNumber) {
+        existingNumber.remove();
+        existingNumber.classList.add('jd-player-placeholder');
+        imageWrap.append(existingNumber);
+      }
+
+      const existingInfo = card.querySelector(':scope > div:last-child');
+      existingInfo?.remove();
+
+      const info = document.createElement('div');
+      info.className = 'jd-player-info';
+
+      const giant = document.createElement('span');
+      giant.className = 'jd-player-number-bg';
+      giant.textContent = playerItem.number || '';
+
+      const text = document.createElement('div');
+      text.className = 'jd-player-text';
+
+      const top = document.createElement('div');
+      top.className = 'jd-player-name-line';
+
+      const name = document.createElement('strong');
+      name.className = 'jd-player-name';
+      name.textContent = playerItem.name || '';
+
+      const meta = document.createElement('span');
+      meta.className = 'jd-player-meta';
+      meta.textContent =
+        `${playerItem.number ? '#' + playerItem.number : ''}${playerItem.position ? ' · ' + playerItem.position : ''}`;
+
+      top.append(name, meta);
+
+      const profile = document.createElement('span');
+      profile.className = 'jd-player-profile-link';
+      profile.textContent = 'View profile →';
+
+      text.append(top, profile);
+      info.append(giant, text);
+
+      card.append(imageWrap, info);
+    });
+  }
+
+  function installRosterPlayerMap() {
+    if (!window.__jdRosterPlayerMap) {
+      window.__jdRosterPlayerMap = new Map();
+    }
+  }
+
   function enhanceVideos() {
     document.querySelectorAll('.media-card').forEach(card => {
       const item = itemForCard(card);
@@ -393,6 +590,9 @@
   function enhanceNow() {
     enhanceVideos();
     enhanceFeaturedPhotos();
+    installHomepageVideoSection();
+    cleanMediaPhotoCards();
+    redesignRosterCards();
     fixLightbox();
   }
 
