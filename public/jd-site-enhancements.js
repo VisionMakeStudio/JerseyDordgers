@@ -518,24 +518,44 @@
     if (!siteData) return [];
 
     const sid = selectedSeasonId();
-    const ids = new Set([
-      ...(siteData.stats || []).filter(s => s.season === sid).map(s => s.player),
-      ...(siteData.spotlights || []).filter(s => s.season === sid).map(s => s.player)
-    ]);
+    const playerMap = new Map((siteData.players || []).map(p => [String(p.id), p]));
+    const allRosterRows = (siteData.rosters || []).filter(r => r.season === sid);
+    const explicit = allRosterRows.filter(r => r.active !== false);
+    const represented = new Set(allRosterRows.map(r => String(r.player)));
+    const roster = [];
 
-    const roster = ids.size
-      ? (siteData.players || []).filter(p => ids.has(p.id))
-      : (siteData.players || []).filter(p => p.active);
+    explicit.forEach(entry => {
+      const p = playerMap.get(String(entry.player));
+      if (!p) return;
+      roster.push({
+        ...p,
+        number: entry.number || p.number || '',
+        position: entry.position || p.position || '',
+        _seasonRoster: entry
+      });
+    });
+
+    // Seasons imported before the V9 roster table can still display from stats.
+    // Once an explicit roster record exists (even inactive), it wins.
+    (siteData.stats || [])
+      .filter(s => s.season === sid && !represented.has(String(s.player)))
+      .forEach(stat => {
+        const p = playerMap.get(String(stat.player));
+        if (p) roster.push({...p});
+      });
 
     const numberValue = value => {
       const m = String(value || '').match(/\d+/);
       return m ? Number(m[0]) : 9999;
     };
 
-    return [...roster].sort((a, b) =>
+    const sorted = roster.sort((a, b) =>
       numberValue(a.number) - numberValue(b.number) ||
       String(a.name || '').localeCompare(String(b.name || ''))
     );
+
+    window.__jdSeasonRosterMap = new Map(sorted.map(p => [String(p.id), p]));
+    return sorted;
   }
 
   function rebuildSeasonRoster() {
@@ -583,7 +603,7 @@
     roster.forEach(playerItem => {
       const card = document.createElement('a');
       card.className = 'player-card';
-      card.href = `/roster/${encodeURIComponent(playerItem.id)}/`;
+      card.href = `/roster/${encodeURIComponent(playerItem.id)}/?season=${encodeURIComponent(selectedSeasonId())}`;
 
       if (playerItem.photo) {
         const image = document.createElement('img');
@@ -787,7 +807,7 @@
       const playerId = href.match(/\/roster\/([^/]+)\//)?.[1];
       if (!playerId) return;
 
-      const playerItem = window.__jdRosterPlayerMap?.get?.(playerId);
+      const playerItem = window.__jdSeasonRosterMap?.get?.(playerId) || window.__jdRosterPlayerMap?.get?.(playerId);
       if (!playerItem) return;
 
       card.dataset.jdRosterReady = '1';
@@ -899,13 +919,110 @@
     image.style.transform = 'none';
   }
 
+
+  function seasonYearFromName(name = '') {
+    return Number(String(name).match(/\b(20\d{2})\b/)?.[1] || 0);
+  }
+
+  function seasonTermOrder(name = '') {
+    if (/fall/i.test(name)) return 3;
+    if (/summer/i.test(name)) return 2;
+    if (/spring/i.test(name)) return 1;
+    return 0;
+  }
+
+  function organizedPublicSeasons() {
+    if (!siteData) return [];
+    const seasons = [...(siteData.seasons || [])];
+    const specificYears = new Set(
+      seasons
+        .filter(s => /(spring|fall|summer|winter)/i.test(s.name || ''))
+        .map(s => seasonYearFromName(s.name))
+        .filter(Boolean)
+    );
+
+    return seasons
+      .filter(s => !(/history/i.test(s.name || '') && specificYears.has(seasonYearFromName(s.name))))
+      .sort((a, b) =>
+        seasonYearFromName(b.name) - seasonYearFromName(a.name) ||
+        seasonTermOrder(b.name) - seasonTermOrder(a.name) ||
+        String(b.name).localeCompare(String(a.name))
+      );
+  }
+
+  function organizeSeasonSelector() {
+    const select = document.querySelector('#season-select');
+    if (!select || !siteData) return;
+
+    const selected = selectedSeasonId();
+    const signature = `${selected}|${(siteData.seasons || []).map(s => s.id + ':' + s.name).join('|')}`;
+    if (select.dataset.jdGrouped === signature) return;
+
+    const groups = new Map();
+    organizedPublicSeasons().forEach(season => {
+      const year = seasonYearFromName(season.name) || 'Other';
+      if (!groups.has(year)) groups.set(year, []);
+      groups.get(year).push(season);
+    });
+
+    select.innerHTML = '';
+    for (const [year, items] of groups) {
+      const group = document.createElement('optgroup');
+      group.label = String(year);
+      items.forEach(season => {
+        const option = document.createElement('option');
+        option.value = season.id;
+        option.textContent = season.name;
+        option.selected = season.id === selected;
+        group.append(option);
+      });
+      select.append(group);
+    }
+
+    select.dataset.jdGrouped = signature;
+  }
+
+  function applySeasonProfileIdentity() {
+    const [route, id] = location.pathname.split('/').filter(Boolean);
+    if (route !== 'roster' || !id || !siteData) return;
+
+    const sid = selectedSeasonId();
+    const player = (siteData.players || []).find(p => String(p.id) === String(id));
+    if (!player) return;
+
+    const roster = (siteData.rosters || []).find(r =>
+      r.season === sid &&
+      String(r.player) === String(id) &&
+      r.active !== false
+    );
+
+    if (!roster) return;
+
+    const profile = document.querySelector('.player-profile');
+    const copy = profile?.querySelector(':scope > div:last-child');
+    const eyebrow = copy?.querySelector('.eyebrow');
+    const paragraph = copy?.querySelector('p');
+    const seasonName = siteData.seasons?.find(s => s.id === sid)?.name || '';
+
+    if (eyebrow) eyebrow.textContent = `JERSEY DODGERS · #${roster.number || player.number || ''} · ${seasonName}`;
+    if (paragraph) {
+      const extras = `${player.bats ? ' · Bats ' + player.bats : ''}${player.throws ? ' · Throws ' + player.throws : ''}`;
+      paragraph.textContent = `${roster.position || player.position || ''}${extras}`;
+    }
+
+    const numberPlaceholder = profile?.querySelector('.player-number');
+    if (numberPlaceholder) numberPlaceholder.textContent = roster.number || player.number || '';
+  }
+
   function enhanceNow() {
     enhanceVideos();
     enhanceFeaturedPhotos();
     syncWatchFeaturedVideos();
     cleanMediaPhotoCards();
+    organizeSeasonSelector();
     rebuildSeasonRoster();
     redesignRosterCards();
+    applySeasonProfileIdentity();
     enhanceCareerStats();
     fixLightbox();
   }
