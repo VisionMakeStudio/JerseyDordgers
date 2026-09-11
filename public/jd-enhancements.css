@@ -1,0 +1,197 @@
+/* Jersey Dodgers media + featured photo enhancements */
+
+/* Video cards: actual inline playback */
+.media-video{
+  display:block;
+  width:100%;
+  max-width:100%;
+  aspect-ratio:16/9;
+  object-fit:cover;
+  background:#000;
+}
+.video-frame{
+  position:relative;
+  width:100%;
+  aspect-ratio:16/9;
+  overflow:hidden;
+  background:#000;
+}
+.video-frame iframe{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  border:0;
+}
+
+/* Featured homepage gallery gets a consistent photo-friendly ratio. */
+.clubhouse-photo{
+  height:auto!important;
+  aspect-ratio:4/3;
+}
+.clubhouse-photo img{
+  object-fit:cover!important;
+}
+
+/* Full photo in lightbox: never crop bodies/edges. */
+#lightbox{
+  width:min(1100px,calc(100% - 24px));
+  max-height:95vh;
+}
+#lightbox-content > img{
+  display:block;
+  width:auto!important;
+  height:auto!important;
+  max-width:100%!important;
+  max-height:78vh!important;
+  margin:0 auto;
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#070b11;
+}
+
+/* Admin: green dot on featured homepage photos. */
+.admin-media-thumb{
+  position:relative;
+}
+.jd-featured-dot{
+  position:absolute;
+  top:-4px;
+  right:-4px;
+  width:13px;
+  height:13px;
+  border-radius:999px;
+  background:#35d06f;
+  border:2px solid #0d151f;
+  box-shadow:0 0 0 2px #35d06f33,0 0 12px #35d06f66;
+  z-index:3;
+}
+.jd-is-featured .admin-row-info > span:last-child strong::after{
+  content:' FEATURED';
+  margin-left:8px;
+  color:#59dd86;
+  font-size:9px;
+  letter-spacing:.08em;
+  vertical-align:middle;
+}
+
+/* Admin: drag-to-frame control */
+.jd-focal-control{
+  grid-column:1/-1;
+  margin-top:4px;
+  padding:18px;
+  border:1px solid #33465e;
+  background:#0b131e;
+  border-radius:8px;
+}
+.jd-focal-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+  margin-bottom:8px;
+}
+.jd-focal-head > div{
+  display:grid;
+  gap:5px;
+}
+.jd-focal-head strong{
+  font-size:16px;
+}
+.jd-focal-head button{
+  background:#17263a;
+  border:1px solid #425875;
+  border-radius:5px;
+  padding:8px 12px;
+}
+.jd-focal-control > p{
+  margin:0 0 14px;
+  font-size:12px;
+  color:#9eacc0;
+  max-width:650px;
+}
+.jd-focus-stage{
+  position:relative;
+  width:min(340px,100%);
+  aspect-ratio:1/1;
+  overflow:hidden;
+  background:#05090e;
+  border:2px solid #41617f;
+  border-radius:6px;
+  cursor:grab;
+  touch-action:none;
+  user-select:none;
+}
+.jd-focus-stage.is-dragging{
+  cursor:grabbing;
+  border-color:#168bff;
+}
+.jd-focus-stage img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  pointer-events:none;
+  user-select:none;
+}
+.jd-focus-guide{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg,transparent calc(50% - .5px),#ffffff55 50%,transparent calc(50% + .5px)),
+    linear-gradient(0deg,transparent calc(50% - .5px),#ffffff55 50%,transparent calc(50% + .5px));
+  box-shadow:inset 0 0 0 1px #ffffff18;
+}
+.jd-focus-guide::after{
+  content:'';
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:18px;
+  height:18px;
+  border:2px solid #fff;
+  border-radius:50%;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 0 3px #168bff66;
+}
+.jd-focus-readout{
+  margin-top:9px;
+  color:#8295ad;
+  font-size:11px;
+}
+.jd-focus-readout b{
+  color:#bfe0ff;
+}
+.jd-no-image .jd-focus-stage::after{
+  content:'Upload/select a photo first';
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  color:#8393a8;
+  font-size:12px;
+}
+.jd-no-image .jd-focus-stage img{
+  display:none;
+}
+
+@media(max-width:700px){
+  .clubhouse-photo{
+    height:auto!important;
+    aspect-ratio:4/3;
+  }
+  .clubhouse-photo:first-child{
+    height:auto!important;
+    aspect-ratio:4/3;
+  }
+  #lightbox-content > img{
+    max-height:72vh!important;
+  }
+  .jd-focal-control{
+    padding:14px;
+  }
+  .jd-focus-stage{
+    width:100%;
+  }
+}
