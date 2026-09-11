@@ -7018,8 +7018,9 @@
       "link": "",
       "category": "Photos",
       "date": "2025",
-      "photographerName": "",
-      "photographerInstagram": "",
+      "photographerName": "Sandy Cordero",
+      "photographerInstagram": "https://www.instagram.com/creative.lens93/",
+      "showPhotographerCredit": true,
       "featured": true,
       "featureOrder": 1,
       "published": true
@@ -7033,6 +7034,7 @@
       "description": "Introductions, game highlights and team stories.",
       "logo": "",
       "link": "https://youtube.com/@JerseyDodgers?si=FP33CxgYEcQ_az5B",
+      "color": "#ff334c",
       "order": 1,
       "active": true
     },
@@ -7043,6 +7045,7 @@
       "description": "Photos, highlights and game-day posts.",
       "logo": "",
       "link": "https://www.instagram.com/jerseydodgers/",
+      "color": "#d946ef",
       "order": 2,
       "active": true
     },
@@ -7053,6 +7056,7 @@
       "description": "Follow the team and open live broadcasts.",
       "logo": "",
       "link": "",
+      "color": "#22c55e",
       "order": 3,
       "active": true
     }
