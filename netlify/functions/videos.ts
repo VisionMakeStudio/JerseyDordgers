@@ -2,25 +2,158 @@ import {getStore,getDeployStore} from '@netlify/blobs';
 import {getUser,verifyRequestOrigin} from '@netlify/identity';
 import {canEdit} from '../../src/schema.mjs';
 
-const MAX_VIDEO_BYTES=60*1024*1024;
+const MAX_VIDEO_BYTES=250*1024*1024;
 const MAX_CHUNK_BYTES=4*1024*1024;
-const MAX_CHUNKS=20;
+const MAX_CHUNKS=80;
+const MAX_RESPONSE_BYTES=4*1024*1024;
 
 const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
-
-function videoHeaders(key,length,extra={}){
- return {
-  'Content-Type':key.endsWith('.mp4')?'video/mp4':'video/webm',
-  'Cache-Control':'public,max-age=31536000,immutable',
-  'X-Content-Type-Options':'nosniff',
-  'Accept-Ranges':'bytes',
-  'Content-Length':String(length),
-  ...extra
- };
-}
+const typeFor=ext=>ext==='webm'?'video/webm':'video/mp4';
+const manifestKey=id=>`manifest-${id}.json`;
+const chunkKey=(id,index)=>`chunk-${id}-${index}`;
 
 function validUploadId(value){
  return /^[a-f0-9-]{20,60}$/i.test(value||'');
+}
+
+function parseVideoKey(value=''){
+ const match=value.match(/^([a-f0-9-]{20,60})\.(mp4|webm)$/i);
+ return match?{id:match[1],ext:match[2].toLowerCase()}:null;
+}
+
+function parseRange(range,total,maxBytes=MAX_RESPONSE_BYTES){
+ if(total<=0)return null;
+
+ let start=0,end=total-1;
+ let requested=Boolean(range);
+
+ if(range){
+  const match=range.match(/^bytes=(\d*)-(\d*)$/);
+  if(!match)return null;
+
+  if(!match[1]){
+   const suffix=Math.max(1,Number(match[2]||0));
+   start=Math.max(0,total-suffix);
+   end=total-1;
+  }else{
+   start=Number(match[1]);
+   end=match[2]?Number(match[2]):total-1;
+  }
+ }
+
+ if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||start>=total||end<start)return null;
+
+ end=Math.min(end,total-1,start+maxBytes-1);
+
+ return {start,end,partial:requested||start>0||end<total-1};
+}
+
+function responseHeaders(ext,length,total,range){
+ const headers={
+  'Content-Type':typeFor(ext),
+  'Cache-Control':'public,max-age=31536000,immutable',
+  'X-Content-Type-Options':'nosniff',
+  'Accept-Ranges':'bytes',
+  'Content-Length':String(length)
+ };
+
+ if(range?.partial)headers['Content-Range']=`bytes ${range.start}-${range.end}/${total}`;
+ return headers;
+}
+
+async function serveChunked(req,store,info,manifest){
+ const total=Number(manifest.totalSize||0);
+ const sizes=Array.isArray(manifest.chunkSizes)?manifest.chunkSizes.map(Number):[];
+
+ if(!total||!sizes.length||sizes.some(v=>!Number.isFinite(v)||v<=0))
+  return new Response('Not found',{status:404});
+
+ if(req.method==='HEAD'){
+  return new Response(null,{
+   status:200,
+   headers:{
+    'Content-Type':typeFor(info.ext),
+    'Content-Length':String(total),
+    'Accept-Ranges':'bytes',
+    'Cache-Control':'public,max-age=31536000,immutable'
+   }
+  });
+ }
+
+ const range=parseRange(req.headers.get('range'),total);
+ if(!range)return new Response('Requested range not satisfiable',{
+  status:416,
+  headers:{'Content-Range':`bytes */${total}`}
+ });
+
+ const pieces=[];
+ let outputLength=0;
+ let absolute=0;
+
+ for(let i=0;i<sizes.length;i++){
+  const size=sizes[i];
+  const chunkStart=absolute;
+  const chunkEnd=absolute+size-1;
+  absolute+=size;
+
+  if(chunkEnd<range.start)continue;
+  if(chunkStart>range.end)break;
+
+  const raw=await store.get(chunkKey(info.id,i),{type:'arrayBuffer'});
+  if(!raw)return new Response('Video data is incomplete',{status:503});
+
+  const bytes=new Uint8Array(raw);
+  const from=Math.max(0,range.start-chunkStart);
+  const to=Math.min(bytes.length-1,range.end-chunkStart);
+  const slice=bytes.slice(from,to+1);
+
+  pieces.push(slice);
+  outputLength+=slice.length;
+ }
+
+ const output=new Uint8Array(outputLength);
+ let offset=0;
+ for(const piece of pieces){
+  output.set(piece,offset);
+  offset+=piece.length;
+ }
+
+ return new Response(output,{
+  status:range.partial?206:200,
+  headers:responseHeaders(info.ext,output.length,total,range)
+ });
+}
+
+async function serveLegacy(req,store,key,info){
+ const raw=await store.get(key,{type:'arrayBuffer'});
+ if(!raw)return new Response('Not found',{status:404});
+
+ const bytes=new Uint8Array(raw);
+ const total=bytes.length;
+
+ if(req.method==='HEAD'){
+  return new Response(null,{
+   status:200,
+   headers:{
+    'Content-Type':typeFor(info.ext),
+    'Content-Length':String(total),
+    'Accept-Ranges':'bytes',
+    'Cache-Control':'public,max-age=31536000,immutable'
+   }
+  });
+ }
+
+ const range=parseRange(req.headers.get('range'),total);
+ if(!range)return new Response('Requested range not satisfiable',{
+  status:416,
+  headers:{'Content-Range':`bytes */${total}`}
+ });
+
+ const slice=bytes.slice(range.start,range.end+1);
+ return new Response(slice,{
+  status:range.partial?206:200,
+  headers:responseHeaders(info.ext,slice.length,total,range)
+ });
 }
 
 export default async(req,context)=>{
@@ -29,35 +162,17 @@ export default async(req,context)=>{
   :getDeployStore('dodgers-videos');
 
  try{
-  if(req.method==='GET'){
-   const key=context.params.key;
-   if(!/^[a-f0-9-]+\.(mp4|webm)$/.test(key||''))return new Response('Not found',{status:404});
+  if(req.method==='GET'||req.method==='HEAD'){
+   const key=context.params.key||'';
+   const info=parseVideoKey(key);
+   if(!info)return new Response('Not found',{status:404});
 
-   const raw=await store.get(key,{type:'arrayBuffer'});
-   if(!raw)return new Response('Not found',{status:404});
-
-   const bytes=new Uint8Array(raw);
-   const range=req.headers.get('range');
-
-   if(range){
-    const match=range.match(/^bytes=(\d*)-(\d*)$/);
-    if(match){
-     const start=match[1]?Number(match[1]):0;
-     const end=match[2]?Math.min(Number(match[2]),bytes.length-1):bytes.length-1;
-
-     if(start>=0&&end>=start&&start<bytes.length){
-      const slice=bytes.slice(start,end+1);
-      return new Response(slice,{
-       status:206,
-       headers:videoHeaders(key,slice.length,{
-        'Content-Range':`bytes ${start}-${end}/${bytes.length}`
-       })
-      });
-     }
-    }
+   const manifest=await store.get(manifestKey(info.id),{type:'json'});
+   if(manifest&&manifest.ext===info.ext){
+    return serveChunked(req,store,info,manifest);
    }
 
-   return new Response(bytes,{headers:videoHeaders(key,bytes.length)});
+   return serveLegacy(req,store,key,info);
   }
 
   if(req.method!=='POST')return new Response(null,{status:405});
@@ -70,86 +185,83 @@ export default async(req,context)=>{
 
   const url=new URL(req.url);
   const uploadId=url.searchParams.get('uploadId');
-  const chunkParam=url.searchParams.get('chunk');
-  const totalParam=url.searchParams.get('total');
-  const extParam=(url.searchParams.get('ext')||'').toLowerCase();
+  const chunk=Number(url.searchParams.get('chunk'));
+  const total=Number(url.searchParams.get('total'));
+  const ext=(url.searchParams.get('ext')||'').toLowerCase();
+  const declaredFileSize=Number(url.searchParams.get('fileSize')||0);
 
-  // New chunked upload path for larger phone/Reel/Story videos.
-  if(uploadId||chunkParam!==null||totalParam!==null){
-   if(!validUploadId(uploadId))return json({error:'Invalid video upload session.'},400);
+  if(!validUploadId(uploadId))
+   return json({error:'Invalid video upload session.'},400);
 
-   const chunk=Number(chunkParam);
-   const total=Number(totalParam);
-   const ext=extParam==='webm'?'webm':extParam==='mp4'?'mp4':'';
+  if(!Number.isInteger(chunk)||chunk<0||
+     !Number.isInteger(total)||total<1||total>MAX_CHUNKS||chunk>=total||
+     !['mp4','webm'].includes(ext))
+   return json({error:'Invalid video upload chunk.'},400);
 
-   if(!Number.isInteger(chunk)||chunk<0||!Number.isInteger(total)||total<1||total>MAX_CHUNKS||chunk>=total||!ext)
-    return json({error:'Invalid video upload chunk.'},400);
+  if(!Number.isFinite(declaredFileSize)||declaredFileSize<12||declaredFileSize>MAX_VIDEO_BYTES)
+   return json({error:'Choose a video under 250 MB.'},400);
 
-   const bytes=new Uint8Array(await req.arrayBuffer());
-   if(bytes.length<1||bytes.length>MAX_CHUNK_BYTES)
-    return json({error:'Video chunk is too large. Please try the upload again.'},400);
+  const bytes=new Uint8Array(await req.arrayBuffer());
+  if(bytes.length<1||bytes.length>MAX_CHUNK_BYTES)
+   return json({error:'Video chunk is too large. Please try the upload again.'},400);
 
-   const prefix=`upload-${uploadId}`;
-   await store.set(`${prefix}-${chunk}`,bytes.buffer);
-
-   if(chunk<total-1){
-    return json({ok:true,chunk,total});
-   }
-
-   const chunks=[];
-   let size=0;
-
-   for(let i=0;i<total;i++){
-    const part=await store.get(`${prefix}-${i}`,{type:'arrayBuffer'});
-    if(!part)return json({error:'A video upload chunk is missing. Please upload the video again.'},400);
-
-    const view=new Uint8Array(part);
-    size+=view.length;
-
-    if(size>MAX_VIDEO_BYTES)
-     return json({error:'Choose a video under 60 MB or use a YouTube link.'},400);
-
-    chunks.push(view);
-   }
-
-   const combined=new Uint8Array(size);
-   let offset=0;
-   for(const part of chunks){
-    combined.set(part,offset);
-    offset+=part.length;
-   }
-
-   const mp4=combined.length>=8&&new TextDecoder().decode(combined.slice(4,8))==='ftyp';
-   const webm=combined.length>=4&&[0x1a,0x45,0xdf,0xa3].every((v,i)=>combined[i]===v);
+  if(chunk===0){
+   const mp4=bytes.length>=8&&new TextDecoder().decode(bytes.slice(4,8))==='ftyp';
+   const webm=bytes.length>=4&&[0x1a,0x45,0xdf,0xa3].every((v,i)=>bytes[i]===v);
 
    if((ext==='mp4'&&!mp4)||(ext==='webm'&&!webm))
     return json({error:'Use a valid MP4 or WebM video.'},400);
-
-   const key=crypto.randomUUID()+'.'+ext;
-   await store.set(key,combined.buffer);
-
-   // Best-effort temp cleanup.
-   await Promise.allSettled(
-    Array.from({length:total},(_,i)=>store.delete(`${prefix}-${i}`))
-   );
-
-   return json({url:'/api/videos/'+key,size});
   }
 
-  // Keep the original single-request path for small videos.
-  const bytes=new Uint8Array(await req.arrayBuffer());
-  if(bytes.length>5000000||bytes.length<12)
-   return json({error:'For larger videos, reopen this media post and use the updated uploader.'},400);
+  await store.set(chunkKey(uploadId,chunk),bytes.buffer,{
+   metadata:{
+    size:bytes.length,
+    ext,
+    total,
+    declaredFileSize,
+    createdAt:Date.now()
+   }
+  });
 
-  const mp4=new TextDecoder().decode(bytes.slice(4,8))==='ftyp';
-  const webm=[0x1a,0x45,0xdf,0xa3].every((v,i)=>bytes[i]===v);
+  if(chunk<total-1){
+   return json({ok:true,chunk,total});
+  }
 
-  if(!mp4&&!webm)return json({error:'Use an MP4 or WebM video.'},400);
+  // Finalize using metadata only. We deliberately do NOT join a 250 MB file
+  // inside one function invocation.
+  const chunkSizes=[];
+  let actualSize=0;
 
-  const key=crypto.randomUUID()+'.'+(mp4?'mp4':'webm');
-  await store.set(key,bytes.buffer);
+  for(let i=0;i<total;i++){
+   const meta=await store.getMetadata(chunkKey(uploadId,i));
+   const size=Number(meta?.metadata?.size||0);
 
-  return json({url:'/api/videos/'+key,size:bytes.length});
+   if(!meta||!size)
+    return json({error:'A video upload chunk is missing. Please upload the video again.'},400);
+
+   actualSize+=size;
+   if(actualSize>MAX_VIDEO_BYTES)
+    return json({error:'Choose a video under 250 MB.'},400);
+
+   chunkSizes.push(size);
+  }
+
+  if(Math.abs(actualSize-declaredFileSize)>2)
+   return json({error:'The uploaded video size did not match. Please upload it again.'},400);
+
+  await store.setJSON(manifestKey(uploadId),{
+   version:2,
+   ext,
+   total,
+   totalSize:actualSize,
+   chunkSizes,
+   createdAt:Date.now()
+  });
+
+  return json({
+   url:`/api/videos/${uploadId}.${ext}`,
+   size:actualSize
+  });
  }catch(error){
   console.error('videos function error',error);
   return json({error:'Video upload failed. Please try again.'},500);

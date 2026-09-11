@@ -3,7 +3,7 @@
 
   const FRAME_RE = /\[\[JD_FRAME:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
   const OLD_FOCUS_RE = /\[\[JD_FOCUS:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
-  const MAX_VIDEO_BYTES = 60 * 1024 * 1024;
+  const MAX_VIDEO_BYTES = 250 * 1024 * 1024;
   const CHUNK_BYTES = 3.5 * 1024 * 1024;
 
   let mediaCache = new Map();
@@ -310,7 +310,7 @@
     }
 
     if (file.size > MAX_VIDEO_BYTES) {
-      message.textContent = 'This video is over 60 MB. Compress it or use a YouTube link.';
+      message.textContent = 'This video is over 250 MB. Compress it or use a YouTube link.';
       return;
     }
 
@@ -329,11 +329,11 @@
         const end = Math.min(file.size, start + CHUNK_BYTES);
         const chunk = file.slice(start, end);
 
-        const percent = Math.round((i / total) * 100);
+        const percent = Math.round(((i + 1) / total) * 100);
         message.textContent = `Uploading video… ${percent}%`;
 
         const response = await fetch(
-          `/api/videos?uploadId=${encodeURIComponent(uploadId)}&chunk=${i}&total=${total}&ext=${ext}`,
+          `/api/videos?uploadId=${encodeURIComponent(uploadId)}&chunk=${i}&total=${total}&ext=${ext}&fileSize=${file.size}`,
           {
             method: 'POST',
             credentials: 'same-origin',
@@ -386,7 +386,7 @@
     const note = input.parentElement.querySelector('small');
     if (note) {
       note.textContent =
-        'MP4 or WebM up to 60 MB. Portrait/Reel/Story and landscape videos are both supported.';
+        'MP4 or WebM up to 250 MB. Portrait/Reel/Story and landscape videos are both supported.';
     }
 
     // Replace the original 5 MB onchange handler.

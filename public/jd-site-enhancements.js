@@ -183,6 +183,82 @@
     return wrap;
   }
 
+
+  function buildDirectVideoStage(video) {
+    if (!(video instanceof HTMLVideoElement)) return null;
+
+    const existing = video.closest('.jd-video-stage');
+    if (existing) return existing;
+
+    const stage = document.createElement('div');
+    stage.className = 'jd-video-stage jd-direct-video-stage';
+
+    const parent = video.parentNode;
+    parent.insertBefore(stage, video);
+    stage.append(video);
+
+    video.classList.add('jd-video-main');
+
+    const backdrop = video.cloneNode(false);
+    backdrop.className = 'jd-video-backdrop';
+    backdrop.removeAttribute('controls');
+    backdrop.controls = false;
+    backdrop.muted = true;
+    backdrop.defaultMuted = true;
+    backdrop.autoplay = true;
+    backdrop.loop = true;
+    backdrop.playsInline = true;
+    backdrop.preload = 'metadata';
+    backdrop.tabIndex = -1;
+    backdrop.setAttribute('aria-hidden', 'true');
+    backdrop.setAttribute('muted', '');
+    backdrop.setAttribute('autoplay', '');
+    backdrop.setAttribute('loop', '');
+    backdrop.setAttribute('playsinline', '');
+
+    stage.insertBefore(backdrop, video);
+
+    const playBoth = () => {
+      video.muted = true;
+      backdrop.muted = true;
+      video.play().catch(() => {});
+      backdrop.play().catch(() => {});
+    };
+
+    video.addEventListener('play', () => {
+      if (Math.abs((backdrop.currentTime || 0) - (video.currentTime || 0)) > .35) {
+        try { backdrop.currentTime = video.currentTime; } catch {}
+      }
+      backdrop.play().catch(() => {});
+    });
+
+    video.addEventListener('pause', () => backdrop.pause());
+    video.addEventListener('seeking', () => {
+      try { backdrop.currentTime = video.currentTime; } catch {}
+    });
+
+    if (video.readyState >= 2) playBoth();
+    else video.addEventListener('canplay', playBoth, { once: true });
+
+    return stage;
+  }
+
+  function buildExternalVideoStage(frame) {
+    if (!(frame instanceof HTMLElement)) return null;
+
+    const existing = frame.closest('.jd-video-stage');
+    if (existing) return existing;
+
+    const stage = document.createElement('div');
+    stage.className = 'jd-video-stage jd-external-video-stage';
+
+    const parent = frame.parentNode;
+    parent.insertBefore(stage, frame);
+    stage.append(frame);
+
+    return stage;
+  }
+
   function ensurePlayer(card, item) {
     if (!item || item.category !== 'Video') return;
 
@@ -213,6 +289,9 @@
     card.classList.add('jd-video-card');
     card.classList.add('jd-video-only');
     updateVideoGrid(card.closest('.media-grid'));
+
+    if (video) buildDirectVideoStage(video);
+    if (frame) buildExternalVideoStage(frame);
 
     if (frame?.classList.contains('jd-video-frame-portrait')) {
       card.classList.add('jd-video-portrait');

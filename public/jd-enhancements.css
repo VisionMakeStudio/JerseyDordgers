@@ -491,3 +491,169 @@
     width:100%!important;
   }
 }
+
+
+/* =========================
+   V5 COMPACT 4:5 VIDEO GALLERY
+   ========================= */
+
+/* Three compact cards line up like a media gallery. */
+.jd-video-grid,
+.jd-video-grid.jd-video-grid-1,
+.jd-video-grid.jd-video-grid-2,
+.jd-video-grid.jd-video-grid-3plus{
+  display:grid!important;
+  gap:12px!important;
+  align-items:start!important;
+}
+
+.jd-video-grid.jd-video-grid-1{
+  grid-template-columns:minmax(0,420px)!important;
+  justify-content:center!important;
+}
+
+.jd-video-grid.jd-video-grid-2{
+  grid-template-columns:repeat(2,minmax(0,420px))!important;
+  justify-content:center!important;
+}
+
+.jd-video-grid.jd-video-grid-3plus{
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  justify-content:stretch!important;
+}
+
+/* Every public video occupies the same 4:5 card regardless of source ratio. */
+.media-card.jd-video-only{
+  width:100%!important;
+  aspect-ratio:4/5!important;
+  min-height:0!important;
+  overflow:hidden!important;
+  border:1px solid #2c3c50!important;
+  background:#03070c!important;
+}
+
+.jd-video-stage{
+  position:relative;
+  width:100%;
+  height:100%;
+  aspect-ratio:4/5;
+  overflow:hidden;
+  display:grid;
+  place-items:center;
+  background:
+    radial-gradient(circle at 50% 35%,#183454,#08111e 58%,#020407);
+  isolation:isolate;
+}
+
+/* Uploaded file: duplicated muted video behind it creates the soft fill,
+   while the real foreground video stays completely visible. */
+.jd-video-backdrop{
+  position:absolute!important;
+  z-index:0;
+  inset:-12%;
+  width:124%!important;
+  height:124%!important;
+  object-fit:cover!important;
+  filter:blur(28px) brightness(.42) saturate(.95);
+  transform:scale(1.08);
+  pointer-events:none;
+}
+
+.jd-video-main,
+.jd-direct-video-stage > .media-video{
+  position:relative!important;
+  z-index:2;
+  display:block!important;
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  margin:0!important;
+  object-fit:contain!important;
+  object-position:center!important;
+  background:transparent!important;
+}
+
+/* External players still sit inside the same 4:5 card. */
+.jd-external-video-stage{
+  padding:0;
+  background:#03070c;
+}
+
+.jd-external-video-stage > .video-frame{
+  position:relative!important;
+  margin:auto!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  background:#000!important;
+}
+
+.jd-external-video-stage > .jd-video-frame-landscape{
+  width:100%!important;
+  height:auto!important;
+  aspect-ratio:16/9!important;
+}
+
+.jd-external-video-stage > .jd-video-frame-portrait{
+  width:auto!important;
+  height:100%!important;
+  aspect-ratio:9/16!important;
+}
+
+.jd-external-video-stage > .jd-video-frame-instagram-post{
+  width:100%!important;
+  height:100%!important;
+  aspect-ratio:4/5!important;
+}
+
+/* Don't let older V4 single-video sizing rules stretch the card. */
+.jd-video-grid-1 > .jd-video-portrait,
+.jd-video-grid-1 > .jd-video-instagram-post,
+.jd-video-grid-1 > .jd-video-landscape{
+  width:100%!important;
+  justify-self:stretch!important;
+}
+
+/* Missing attachment also uses the same gallery card size. */
+.media-card.jd-video-only .jd-video-missing{
+  height:100%;
+  min-height:0;
+  border:0;
+}
+
+/* Desktop: exactly three across when available. */
+@media(min-width:901px){
+  .jd-video-grid.jd-video-grid-3plus{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+}
+
+/* Tablet can use two; phones use one. */
+@media(max-width:900px) and (min-width:701px){
+  .jd-video-grid,
+  .jd-video-grid.jd-video-grid-1,
+  .jd-video-grid.jd-video-grid-2,
+  .jd-video-grid.jd-video-grid-3plus{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+
+  .jd-video-grid.jd-video-grid-1{
+    grid-template-columns:minmax(0,400px)!important;
+    justify-content:center!important;
+  }
+}
+
+@media(max-width:700px){
+  .jd-video-grid,
+  .jd-video-grid.jd-video-grid-1,
+  .jd-video-grid.jd-video-grid-2,
+  .jd-video-grid.jd-video-grid-3plus{
+    grid-template-columns:1fr!important;
+    gap:10px!important;
+  }
+
+  .media-card.jd-video-only{
+    width:min(100%,440px)!important;
+    justify-self:center!important;
+  }
+}
