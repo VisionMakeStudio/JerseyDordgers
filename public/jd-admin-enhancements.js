@@ -2,6 +2,7 @@
   'use strict';
 
   const FRAME_RE = /\[\[JD_FRAME:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
+  const VIDEO_FRAME_RE = /\[\[JD_VFRAME:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
   const OLD_FOCUS_RE = /\[\[JD_FOCUS:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
   const MAX_VIDEO_BYTES = 250 * 1024 * 1024;
   const CHUNK_BYTES = 3.5 * 1024 * 1024;
@@ -36,15 +37,32 @@
     return { x: 50, y: 50, zoom: 1 };
   }
 
+  function parseVideoFrame(caption = '') {
+    VIDEO_FRAME_RE.lastIndex = 0;
+    const match = VIDEO_FRAME_RE.exec(String(caption || ''));
+    VIDEO_FRAME_RE.lastIndex = 0;
+
+    if (match) return {
+      x: clamp(match[1], 0, 100),
+      y: clamp(match[2], 0, 100),
+      zoom: clamp(match[3], 1, 4)
+    };
+
+    return { x: 50, y: 50, zoom: 1 };
+  }
+
   function cleanCaption(caption = '') {
     FRAME_RE.lastIndex = 0;
+    VIDEO_FRAME_RE.lastIndex = 0;
     OLD_FOCUS_RE.lastIndex = 0;
     const clean = String(caption || '')
       .replace(FRAME_RE, '')
+      .replace(VIDEO_FRAME_RE, '')
       .replace(OLD_FOCUS_RE, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
     FRAME_RE.lastIndex = 0;
+    VIDEO_FRAME_RE.lastIndex = 0;
     OLD_FOCUS_RE.lastIndex = 0;
     return clean;
   }
@@ -272,17 +290,17 @@
     panel.innerHTML = `
       <div class="jd-framing-heading">
         <div>
-          <span class="eyebrow">HOMEPAGE FEATURED PHOTO</span>
-          <h3>Frame the featured picture</h3>
+          <span class="eyebrow">PHOTO FRAMING</span>
+          <h3>Frame the photo</h3>
         </div>
         <button type="button" class="jd-reset-frame">Reset</button>
       </div>
       <p>
-        This uses the photo you already uploaded. At 1.00× the full picture fits inside the tile.
-        Increase Zoom when you want a tighter crop, then drag the photo to choose the area you want.
+        This 4:5 preview is how the photo is framed in the media cards and homepage feature.
+        At 1.00× the full picture fits inside the tile. Zoom in and drag to choose the crop you want.
       </p>
       <div class="jd-framing-workspace">
-        <div class="jd-framing-stage" tabindex="0" aria-label="Featured photo framing preview">
+        <div class="jd-framing-stage" tabindex="0" aria-label="Photo framing preview">
           <img alt="Featured framing preview">
           <span class="jd-framing-crosshair" aria-hidden="true"></span>
           <span class="jd-drag-tip">DRAG TO REPOSITION</span>
@@ -420,6 +438,221 @@
     paint();
   }
 
+
+  function installVideoFraming(form, mediaId = '') {
+    if (!formIsMedia(form) || form.dataset.jdVideoFramingReady === '1') return;
+    form.dataset.jdVideoFramingReady = '1';
+
+    const videoInput = form.querySelector('[name="video"]');
+    const captionInput = form.querySelector('[name="caption"]');
+    if (!videoInput || !captionInput) return;
+
+    const cached = mediaCache.get(String(mediaId || ''));
+    const initial = parseVideoFrame(cached?.caption ?? captionInput.value ?? '');
+
+    const panel = document.createElement('section');
+    panel.className = 'jd-video-framing-panel wide';
+    panel.innerHTML = `
+      <div class="jd-framing-heading">
+        <div>
+          <span class="eyebrow">VIDEO FRAMING</span>
+          <h3>Frame the 4:5 video</h3>
+        </div>
+        <div class="jd-video-frame-quick">
+          <button type="button" class="jd-video-fit">Fit</button>
+          <button type="button" class="jd-video-fill">Fill</button>
+          <button type="button" class="jd-video-reset">Reset</button>
+        </div>
+      </div>
+      <p>
+        Reframe an uploaded video at any time without uploading it again.
+        Fit shows the complete video. Fill enlarges it to cover the 4:5 card.
+        You can zoom farther and drag to choose exactly what stays visible.
+      </p>
+      <div class="jd-framing-workspace">
+        <div class="jd-video-framing-stage" tabindex="0" aria-label="Video framing preview">
+          <video class="jd-video-framing-backdrop" muted loop playsinline preload="metadata" aria-hidden="true"></video>
+          <video class="jd-video-framing-preview" muted loop playsinline preload="metadata"></video>
+          <span class="jd-framing-crosshair" aria-hidden="true"></span>
+          <span class="jd-drag-tip">DRAG TO REPOSITION</span>
+        </div>
+        <div class="jd-framing-details">
+          <label>
+            Zoom
+            <input class="jd-video-zoom" type="range" min="1" max="4" step="0.01">
+          </label>
+          <label>
+            Left / right focus
+            <input class="jd-video-focus-x" type="range" min="0" max="100" step="1">
+          </label>
+          <label>
+            Up / down focus
+            <input class="jd-video-focus-y" type="range" min="0" max="100" step="1">
+          </label>
+          <span class="jd-video-focus-readout"></span>
+          <small>
+            Tip: use Fill for landscape clips, then drag until the player/action is centered.
+          </small>
+        </div>
+      </div>
+      <input type="hidden" name="jd-video-frame-x">
+      <input type="hidden" name="jd-video-frame-y">
+      <input type="hidden" name="jd-video-frame-zoom">
+    `;
+
+    (form.querySelector('.form-grid') || form).append(panel);
+
+    const stage = panel.querySelector('.jd-video-framing-stage');
+    const preview = panel.querySelector('.jd-video-framing-preview');
+    const backdrop = panel.querySelector('.jd-video-framing-backdrop');
+    const zoomRange = panel.querySelector('.jd-video-zoom');
+    const xRange = panel.querySelector('.jd-video-focus-x');
+    const yRange = panel.querySelector('.jd-video-focus-y');
+    const xHidden = panel.querySelector('[name="jd-video-frame-x"]');
+    const yHidden = panel.querySelector('[name="jd-video-frame-y"]');
+    const zHidden = panel.querySelector('[name="jd-video-frame-zoom"]');
+    const readout = panel.querySelector('.jd-video-focus-readout');
+    const fit = panel.querySelector('.jd-video-fit');
+    const fill = panel.querySelector('.jd-video-fill');
+    const reset = panel.querySelector('.jd-video-reset');
+
+    let frame = { ...initial };
+    let drag = null;
+    let loadedUrl = '';
+
+    function videoUrl() {
+      return String(videoInput.value || '').trim();
+    }
+
+    function coverZoom() {
+      if (!preview.videoWidth || !preview.videoHeight) return 1;
+      const sourceRatio = preview.videoWidth / preview.videoHeight;
+      const cardRatio = 4 / 5;
+      return clamp(
+        sourceRatio >= cardRatio ? sourceRatio / cardRatio : cardRatio / sourceRatio,
+        1,
+        4
+      );
+    }
+
+    function playPreview() {
+      preview.muted = true;
+      backdrop.muted = true;
+      preview.play().catch(() => {});
+      backdrop.play().catch(() => {});
+    }
+
+    function syncSource() {
+      const url = videoUrl();
+      panel.classList.toggle('jd-no-video-source', !url);
+
+      if (!url) {
+        preview.removeAttribute('src');
+        backdrop.removeAttribute('src');
+        preview.load();
+        backdrop.load();
+        loadedUrl = '';
+        return;
+      }
+
+      const absolute = new URL(url, location.href).href;
+      if (loadedUrl !== absolute) {
+        loadedUrl = absolute;
+        preview.src = url;
+        backdrop.src = url;
+        preview.load();
+        backdrop.load();
+        preview.addEventListener('canplay', playPreview, { once: true });
+        backdrop.addEventListener('canplay', playPreview, { once: true });
+      }
+    }
+
+    function paint() {
+      syncSource();
+
+      preview.style.setProperty('--jd-video-frame-zoom', frame.zoom);
+      preview.style.setProperty('--jd-video-frame-x', `${frame.x}%`);
+      preview.style.setProperty('--jd-video-frame-y', `${frame.y}%`);
+
+      zoomRange.value = String(frame.zoom);
+      xRange.value = String(Math.round(frame.x));
+      yRange.value = String(Math.round(frame.y));
+
+      xHidden.value = String(Math.round(frame.x));
+      yHidden.value = String(Math.round(frame.y));
+      zHidden.value = String(Number(frame.zoom.toFixed(2)));
+
+      readout.textContent =
+        `${frame.zoom.toFixed(2)}× zoom · ${Math.round(frame.x)}% horizontal · ${Math.round(frame.y)}% vertical`;
+    }
+
+    function setFrame(x = frame.x, y = frame.y, zoom = frame.zoom) {
+      frame.x = clamp(x, 0, 100);
+      frame.y = clamp(y, 0, 100);
+      frame.zoom = clamp(zoom, 1, 4);
+      paint();
+    }
+
+    zoomRange.addEventListener('input', () => setFrame(frame.x, frame.y, zoomRange.value));
+    xRange.addEventListener('input', () => setFrame(xRange.value, frame.y, frame.zoom));
+    yRange.addEventListener('input', () => setFrame(frame.x, yRange.value, frame.zoom));
+
+    fit.addEventListener('click', () => setFrame(frame.x, frame.y, 1));
+    fill.addEventListener('click', () => setFrame(50, 50, coverZoom()));
+    reset.addEventListener('click', () => setFrame(50, 50, 1));
+
+    stage.addEventListener('pointerdown', event => {
+      if (!videoUrl()) return;
+      const rect = stage.getBoundingClientRect();
+      drag = {
+        id: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        startX: frame.x,
+        startY: frame.y,
+        width: Math.max(1, rect.width),
+        height: Math.max(1, rect.height)
+      };
+      stage.setPointerCapture?.(event.pointerId);
+      stage.classList.add('is-dragging');
+      event.preventDefault();
+    });
+
+    stage.addEventListener('pointermove', event => {
+      if (!drag || drag.id !== event.pointerId) return;
+      const dx = event.clientX - drag.x;
+      const dy = event.clientY - drag.y;
+      setFrame(
+        drag.startX - (dx / drag.width) * 100,
+        drag.startY - (dy / drag.height) * 100,
+        frame.zoom
+      );
+      event.preventDefault();
+    });
+
+    const stopDrag = event => {
+      if (!drag) return;
+      if (event?.pointerId !== undefined && event.pointerId !== drag.id) return;
+      drag = null;
+      stage.classList.remove('is-dragging');
+    };
+    stage.addEventListener('pointerup', stopDrag);
+    stage.addEventListener('pointercancel', stopDrag);
+
+    preview.addEventListener('loadedmetadata', () => {
+      playPreview();
+      readout.textContent =
+        `${frame.zoom.toFixed(2)}× zoom · ${preview.videoWidth}×${preview.videoHeight} source · ${Math.round(frame.x)}% / ${Math.round(frame.y)}%`;
+    });
+
+    form.addEventListener('jd-video-uploaded', () => {
+      loadedUrl = '';
+      [0, 150, 500].forEach(delay => setTimeout(paint, delay));
+    });
+
+    paint();
+  }
+
   async function uploadVideoInChunks(file, form, input) {
     const message = form.querySelector('.form-message');
     const submit = form.querySelector('[type="submit"]');
@@ -475,6 +708,7 @@
       if (!result?.url) throw new Error('The video upload did not finish.');
 
       videoField.value = result.url;
+      form.dispatchEvent(new CustomEvent('jd-video-uploaded'));
 
       let preview = input.parentElement.querySelector('video.video-preview');
       if (!preview) {
@@ -525,21 +759,31 @@
 
     const caption = form.querySelector('[name="caption"]');
     const image = form.querySelector('[name="image"]');
+    const video = form.querySelector('[name="video"]');
+    const category = form.querySelector('[name="category"]')?.value || '';
     if (!caption) return;
 
     const clean = cleanCaption(caption.value);
 
-    if (!String(image?.value || '').trim()) {
-      caption.value = clean;
+    if (category === 'Video' && String(video?.value || '').trim()) {
+      const x = clamp(form.querySelector('[name="jd-video-frame-x"]')?.value ?? 50, 0, 100);
+      const y = clamp(form.querySelector('[name="jd-video-frame-y"]')?.value ?? 50, 0, 100);
+      const zoom = clamp(form.querySelector('[name="jd-video-frame-zoom"]')?.value ?? 1, 1, 4);
+      const marker = `[[JD_VFRAME:${Math.round(x)},${Math.round(y)},${zoom.toFixed(2)}]]`;
+      caption.value = clean ? `${clean}\n${marker}` : marker;
       return;
     }
 
-    const x = clamp(form.querySelector('[name="jd-frame-x"]')?.value ?? 50, 0, 100);
-    const y = clamp(form.querySelector('[name="jd-frame-y"]')?.value ?? 50, 0, 100);
-    const zoom = clamp(form.querySelector('[name="jd-frame-zoom"]')?.value ?? 1, .85, 2.5);
+    if (category === 'Photos' && String(image?.value || '').trim()) {
+      const x = clamp(form.querySelector('[name="jd-frame-x"]')?.value ?? 50, 0, 100);
+      const y = clamp(form.querySelector('[name="jd-frame-y"]')?.value ?? 50, 0, 100);
+      const zoom = clamp(form.querySelector('[name="jd-frame-zoom"]')?.value ?? 1, .85, 2.5);
+      const marker = `[[JD_FRAME:${Math.round(x)},${Math.round(y)},${zoom.toFixed(2)}]]`;
+      caption.value = clean ? `${clean}\n${marker}` : marker;
+      return;
+    }
 
-    const marker = `[[JD_FRAME:${Math.round(x)},${Math.round(y)},${zoom.toFixed(2)}]]`;
-    caption.value = clean ? `${clean}\n${marker}` : marker;
+    caption.value = clean;
   }
 
 
@@ -642,6 +886,7 @@
     });
 
     form.querySelector('.jd-framing-panel')?.classList.toggle('jd-conditional-hidden', !isPhoto);
+    form.querySelector('.jd-video-framing-panel')?.classList.toggle('jd-conditional-hidden', category !== 'Video');
   }
 
   function showFeatureReplaceDialog(item, kind) {
@@ -1380,6 +1625,7 @@
     const form = document.querySelector('#editor-content #record-form');
     if (!formIsMedia(form)) return;
     installFraming(form, mediaId);
+    installVideoFraming(form, mediaId);
     installLargeVideoUpload(form);
     cleanupMediaEditor(form);
 

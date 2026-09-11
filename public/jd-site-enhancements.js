@@ -2,6 +2,7 @@
   'use strict';
 
   const FRAME_RE = /\[\[JD_FRAME:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
+  const VIDEO_FRAME_RE = /\[\[JD_VFRAME:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
   const OLD_FOCUS_RE = /\[\[JD_FOCUS:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
 
   let media = [];
@@ -35,14 +36,31 @@
     return { x: 50, y: 50, zoom: 1 };
   }
 
+  function parseVideoFrame(caption = '') {
+    VIDEO_FRAME_RE.lastIndex = 0;
+    const match = VIDEO_FRAME_RE.exec(String(caption || ''));
+    VIDEO_FRAME_RE.lastIndex = 0;
+
+    if (match) return {
+      x: clamp(match[1], 0, 100),
+      y: clamp(match[2], 0, 100),
+      zoom: clamp(match[3], 1, 4)
+    };
+
+    return { x: 50, y: 50, zoom: 1 };
+  }
+
   function stripMarkers(value = '') {
     FRAME_RE.lastIndex = 0;
+    VIDEO_FRAME_RE.lastIndex = 0;
     OLD_FOCUS_RE.lastIndex = 0;
     const clean = String(value || '')
       .replace(FRAME_RE, '')
+      .replace(VIDEO_FRAME_RE, '')
       .replace(OLD_FOCUS_RE, '')
       .trim();
     FRAME_RE.lastIndex = 0;
+    VIDEO_FRAME_RE.lastIndex = 0;
     OLD_FOCUS_RE.lastIndex = 0;
     return clean;
   }
@@ -249,6 +267,16 @@
     return stage;
   }
 
+
+  function applyVideoFrame(stage, item) {
+    if (!stage || !item) return;
+    const frame = parseVideoFrame(item.caption || '');
+    stage.classList.add('jd-video-framed');
+    stage.style.setProperty('--jd-video-frame-zoom', frame.zoom);
+    stage.style.setProperty('--jd-video-frame-x', `${frame.x}%`);
+    stage.style.setProperty('--jd-video-frame-y', `${frame.y}%`);
+  }
+
   function buildExternalVideoStage(frame) {
     if (!(frame instanceof HTMLElement)) return null;
 
@@ -296,7 +324,10 @@
     card.classList.add('jd-video-only');
     updateVideoGrid(card.closest('.media-grid'));
 
-    if (video) buildDirectVideoStage(video);
+    if (video) {
+      const stage = buildDirectVideoStage(video);
+      applyVideoFrame(stage, item);
+    }
     if (frame) buildExternalVideoStage(frame);
 
     if (frame?.classList.contains('jd-video-frame-portrait')) {
@@ -455,7 +486,16 @@
       if (!photoButton || !item.image) return;
 
       card.classList.add('jd-clean-photo-card');
+      photoButton.classList.add('jd-framed-media-photo');
       photoButton.style.setProperty('--jd-media-bg', backgroundValue(item.image));
+
+      const frame = parseFrame(item.caption || '');
+      const mediaImage = photoButton.querySelector('img');
+      if (mediaImage) {
+        mediaImage.style.setProperty('--jd-frame-zoom', frame.zoom);
+        mediaImage.style.setProperty('--jd-frame-x', `${frame.x}%`);
+        mediaImage.style.setProperty('--jd-frame-y', `${frame.y}%`);
+      }
 
       let credit = card.querySelector('.jd-photo-credit-compact');
       if (!credit) {

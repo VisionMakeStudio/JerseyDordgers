@@ -1393,3 +1393,250 @@
     flex-direction:column;
   }
 }
+
+
+/* ======================================================
+   V8 — UNIFIED 4:5 MEDIA + VIDEO FRAMING
+   ====================================================== */
+
+/* Photos now use the same 4:5 presentation ratio as videos. */
+.clubhouse-gallery{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:12px!important;
+  align-items:start!important;
+}
+
+.clubhouse-photo,
+.clubhouse-photo:first-child{
+  width:100%!important;
+  height:auto!important;
+  aspect-ratio:4/5!important;
+}
+
+/* Admin photo preview now matches the public 4:5 tile. */
+.jd-framing-stage{
+  aspect-ratio:4/5!important;
+}
+
+/* Media page: keep the 4:5 card and honor the saved photo framing. */
+.jd-clean-photo-card .photo-button,
+.jd-clean-photo-card .photo-button.jd-framed-media-photo{
+  aspect-ratio:4/5!important;
+}
+
+.jd-clean-photo-card .photo-button.jd-framed-media-photo img{
+  object-fit:contain!important;
+  object-position:center center!important;
+  transform:scale(var(--jd-frame-zoom,1));
+  transform-origin:var(--jd-frame-x,50%) var(--jd-frame-y,50%);
+  transition:transform .2s ease;
+}
+
+/* Uploaded/direct video: the saved Admin framing is applied to the foreground. */
+.jd-video-stage.jd-video-framed .jd-video-main,
+.jd-video-stage.jd-video-framed > .media-video{
+  object-fit:contain!important;
+  object-position:center center!important;
+  transform:scale(var(--jd-video-frame-zoom,1));
+  transform-origin:var(--jd-video-frame-x,50%) var(--jd-video-frame-y,50%);
+}
+
+/* ======================================================
+   V8 — ADMIN VIDEO FRAMING
+   ====================================================== */
+
+.jd-video-framing-panel{
+  grid-column:1/-1;
+  padding:18px;
+  border:1px solid #514778;
+  border-radius:8px;
+  background:linear-gradient(145deg,#101323,#151529);
+}
+
+.jd-video-framing-panel > p{
+  max-width:780px;
+  margin:10px 0 16px;
+  color:#a3a7bb;
+  font-size:12px;
+}
+
+.jd-video-frame-quick{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.jd-video-frame-quick button{
+  padding:8px 11px;
+  color:#e8e3ff;
+  background:#211c36;
+  border:1px solid #66589c;
+  border-radius:5px;
+}
+
+.jd-video-fill{
+  border-color:#9279ff!important;
+  background:#302451!important;
+}
+
+.jd-video-framing-stage{
+  position:relative;
+  width:100%;
+  aspect-ratio:4/5;
+  overflow:hidden;
+  border:2px solid #6757a3;
+  border-radius:7px;
+  background:#03060b;
+  cursor:grab;
+  touch-action:none;
+  user-select:none;
+  isolation:isolate;
+}
+
+.jd-video-framing-stage.is-dragging{
+  cursor:grabbing;
+}
+
+.jd-video-framing-backdrop{
+  position:absolute;
+  z-index:0;
+  inset:-12%;
+  width:124%;
+  height:124%;
+  object-fit:cover;
+  filter:blur(25px) brightness(.42) saturate(.95);
+  transform:scale(1.08);
+  pointer-events:none;
+}
+
+.jd-video-framing-preview{
+  position:absolute;
+  z-index:2;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  object-position:center center;
+  transform:scale(var(--jd-video-frame-zoom,1));
+  transform-origin:var(--jd-video-frame-x,50%) var(--jd-video-frame-y,50%);
+  pointer-events:none;
+}
+
+.jd-video-framing-stage .jd-framing-crosshair,
+.jd-video-framing-stage .jd-drag-tip{
+  z-index:4;
+}
+
+.jd-video-focus-readout{
+  display:inline-flex;
+  width:max-content;
+  max-width:100%;
+  padding:5px 8px;
+  border-radius:999px;
+  background:#2a2245;
+  color:#c4b7ff;
+  font-size:10px;
+  font-weight:800;
+}
+
+.jd-no-video-source .jd-video-framing-stage::after{
+  content:'Upload an MP4 or WebM video first';
+  position:absolute;
+  z-index:8;
+  inset:0;
+  display:grid;
+  place-items:center;
+  padding:20px;
+  text-align:center;
+  color:#a4a0b9;
+  background:#070810;
+  font-size:12px;
+}
+
+.jd-no-video-source .jd-video-framing-preview,
+.jd-no-video-source .jd-video-framing-backdrop,
+.jd-no-video-source .jd-video-framing-stage .jd-framing-crosshair,
+.jd-no-video-source .jd-video-framing-stage .jd-drag-tip{
+  display:none;
+}
+
+/* ======================================================
+   V8 — MOBILE HOMEPAGE COLLAGES
+   ====================================================== */
+
+@media(max-width:700px){
+  /* Keep the photo layout the user approved:
+     #1 large, #2 and #3 side-by-side underneath. */
+  .clubhouse-gallery{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+
+  .clubhouse-gallery > .clubhouse-photo{
+    grid-column:auto!important;
+    width:100%!important;
+    aspect-ratio:4/5!important;
+  }
+
+  .clubhouse-gallery > .clubhouse-photo:first-child{
+    grid-column:1/-1!important;
+  }
+
+  /* Featured videos use the same collage only on the homepage.
+     Three videos: #1 big, #2/#3 below. */
+  .watch-section .latest-video-grid.jd-video-grid,
+  .watch-section .latest-video-grid.jd-video-grid-3plus{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+    overflow:visible!important;
+    padding-bottom:0!important;
+  }
+
+  .watch-section .latest-video-grid.jd-video-grid-3plus > .media-card{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+    justify-self:stretch!important;
+    aspect-ratio:4/5!important;
+  }
+
+  .watch-section .latest-video-grid.jd-video-grid-3plus > .media-card:first-child{
+    grid-column:1/-1!important;
+  }
+
+  /* If only two videos are featured, show them side-by-side instead of
+     creating a large empty lower slot. */
+  .watch-section .latest-video-grid.jd-video-grid-2{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+
+  .watch-section .latest-video-grid.jd-video-grid-2 > .media-card{
+    width:100%!important;
+    max-width:none!important;
+    min-width:0!important;
+  }
+
+  .watch-section .latest-video-grid.jd-video-grid-1{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+  }
+
+  .watch-section .latest-video-grid.jd-video-grid-1 > .media-card{
+    width:100%!important;
+    max-width:none!important;
+  }
+
+  .jd-video-framing-panel{
+    padding:14px;
+  }
+
+  .jd-video-frame-quick{
+    justify-content:flex-start;
+  }
+}
