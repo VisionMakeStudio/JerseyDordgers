@@ -10,8 +10,9 @@
     "scriptLogo": "/assets/jersey-dodgers.png",
     "leagueName": "PrimeTime Baseball League",
     "leagueLogo": "/assets/primetime-baseball.png",
+    "leagueJoinUrl": "https://www.primetimebaseballleague.com/teams/?u=PRIMETIMEBASEBALLLEA&s=baseball",
     "instagram": "https://www.instagram.com/jerseydodgers/",
-    "youtube": "",
+    "youtube": "https://youtube.com/@JerseyDodgers?si=FP33CxgYEcQ_az5B",
     "contactEmail": "",
     "applicationEmail": "",
     "currentSeason": "fall-2026",
@@ -23,7 +24,9 @@
     "tryoutsLink": "https://www.instagram.com/jerseydodgers/",
     "sponsorTitle": "BACK THE DODGERS.",
     "sponsorText": "Put your business behind local baseball. Ask about sponsor placements, team support and community partnerships.",
-    "footerText": "New Jersey baseball. Every inning. Together."
+    "footerText": "New Jersey baseball. Every inning. Together.",
+    "creatorName": "Vision Make Studio",
+    "creatorUrl": "https://VisionMakeStudio.com"
   },
   "seasons": [
     {

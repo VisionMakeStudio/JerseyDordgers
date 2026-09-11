@@ -29,6 +29,10 @@ from = "/media/*"
 to = "/index.html"
 status = 200
 [[redirects]]
+from = "/videos/*"
+to = "/index.html"
+status = 200
+[[redirects]]
 from = "/tryouts/*"
 to = "/index.html"
 status = 200

@@ -22,6 +22,10 @@ body>header{max-width:100%}.admin-layout,.admin-work,.admin-heading,.list-toolba
  .login-panel{width:calc(100% - 28px);margin:30px auto;padding:22px}.login-panel form button{width:100%;margin:7px 0}
 }
 
+/* Gallery and video administration */
+.bulk-heading{margin-bottom:22px}.bulk-heading h2{margin:7px 0 12px}.bulk-form{display:grid;grid-template-columns:1fr 1fr;gap:16px}.bulk-form label{display:grid;gap:7px}.bulk-form .wide,.bulk-form>p{grid-column:1/-1}.bulk-file{padding:18px;border:1px dashed #4179b5;background:#0b1726}.bulk-form>button{justify-self:start}.video-preview{display:block;width:min(100%,520px);aspect-ratio:16/9;margin-top:12px;background:#020407;object-fit:contain}.form-grid label>small{display:block;margin:6px 0;color:#8fa2ba;font-size:11px}
+@media(max-width:700px){.bulk-form{grid-template-columns:1fr}.bulk-form .wide,.bulk-form>p{grid-column:1}.bulk-form>button{width:100%}.bulk-file{padding:14px}.video-preview{width:100%}}
+
 /* Phone-first admin navigation and containment */
 #admin-root{width:100%;max-width:100%;overflow-x:clip}.admin-menu-toggle,.admin-mobile-head,.admin-mobile-site,.admin-mobile-signout,#admin-menu-backdrop{display:none}.import-season-card{padding:15px;background:#102640;border:1px solid #397ec6}.import-season-card strong{font-size:11px;letter-spacing:1px;color:#8fc6ff}.import-season-card select{margin-top:4px}
 @media(max-width:700px){

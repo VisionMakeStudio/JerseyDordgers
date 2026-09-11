@@ -2,10 +2,11 @@ import {z} from 'zod';
 const text=z.string().max(10000), short=z.string().max(300), id=z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/);
 const link=z.string().max(2000).refine(v=>!v||/^https:\/\//i.test(v),'Use an https:// link');
 const image=z.string().max(2000).refine(v=>!v||/^\/assets\/[a-zA-Z0-9_.-]+$/.test(v)||/^\/api\/images\/[a-zA-Z0-9_.-]+$/.test(v),'Choose an uploaded image');
+const video=z.string().max(2000).refine(v=>!v||/^\/api\/videos\/[a-f0-9-]+\.(mp4|webm)$/.test(v),'Choose an uploaded MP4 or WebM video');
 const metric=z.string().max(30).refine(v=>!v||v==='-'||/^\d*(\.\d+)?$/.test(v),'Use a number or dash');
 const stats=z.record(z.string().max(40),metric);
 export const schemas={
- settings:z.object({teamName:short.min(1),founded:short,tagline:short,heroTitle:short,heroText:text,heroImage:image,logo:image,scriptLogo:image,leagueName:short,leagueLogo:image,instagram:link,youtube:link,contactEmail:z.union([z.literal(''),z.email()]),applicationEmail:z.union([z.literal(''),z.email()]).default(''),currentSeason:id,championshipTitle:short,championshipText:text,championshipImage:image,tryoutsTitle:short,tryoutsText:text,tryoutsLink:link,sponsorTitle:short,sponsorText:text,footerText:short}),
+ settings:z.object({teamName:short.min(1),founded:short,tagline:short,heroTitle:short,heroText:text,heroImage:image,logo:image,scriptLogo:image,leagueName:short,leagueLogo:image,leagueJoinUrl:link.default('https://www.primetimebaseballleague.com/teams/?u=PRIMETIMEBASEBALLLEA&s=baseball'),instagram:link,youtube:link.default('https://youtube.com/@JerseyDodgers?si=FP33CxgYEcQ_az5B'),contactEmail:z.union([z.literal(''),z.email()]),applicationEmail:z.union([z.literal(''),z.email()]).default(''),currentSeason:id,championshipTitle:short,championshipText:text,championshipImage:image,tryoutsTitle:short,tryoutsText:text,tryoutsLink:link,sponsorTitle:short,sponsorText:text,footerText:short,creatorName:short.default('Vision Make Studio'),creatorUrl:link.default('https://VisionMakeStudio.com')}),
  seasons:z.object({id,name:short.min(1),status:z.enum(['active','archived','upcoming']),note:text}),
  fields:z.object({id,name:short.min(1),address:short,mapsUrl:link,notes:text}),
  teams:z.object({id,name:short.min(1),abbreviation:z.string().max(5),logo:image}),
@@ -13,7 +14,7 @@ export const schemas={
  players:z.object({id,name:short.min(1),number:z.string().max(10),position:short,bats:short,throws:short,bio:text,photo:image,active:z.boolean()}),
  stats:z.object({id,season:id,player:id,bat:stats,pitch:stats,fielding:stats,source:short}),
  standings:z.object({id,season:id,team:id,w:z.number().int().nonnegative(),l:z.number().int().nonnegative(),t:z.number().int().nonnegative(),pct:metric,gb:metric,rs:z.number().int().nonnegative(),ra:z.number().int().nonnegative(),streak:short,home:short,away:short,order:z.number().int().nonnegative(),source:short}),
- media:z.object({id,title:short.min(1),caption:text,image,link,category:z.enum(['Photos','News','Video','Instagram']),date:z.string().max(10),published:z.boolean()}),
+ media:z.object({id,title:short.min(1),caption:text,image,video:video.default(''),link,category:z.enum(['Photos','News','Video','Instagram']),date:z.string().max(10),published:z.boolean()}),
  sponsors:z.object({id,name:short.min(1),logo:image,link,buttonLabel:short.default('Visit sponsor'),description:text,active:z.boolean()}),
  achievements:z.object({id,year:z.string().max(10),title:short.min(1),organization:short}),
  spotlights:z.object({id,season:id,player:id,type:z.enum(['Player of the Week','Game Highlight']),title:short.min(1),summary:text,statLine:short,photo:image,date:z.string().max(10),published:z.boolean(),order:z.number().int().nonnegative()})
