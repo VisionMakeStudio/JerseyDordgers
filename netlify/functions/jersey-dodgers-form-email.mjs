@@ -91,10 +91,12 @@ function buildEmail(data) {
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
         <tr>
           <td width="66" valign="middle">
-            <div style="width:50px;height:50px;border-radius:50%;
-              background:#11141a;border:2px solid #fff;color:#fff;
-              font-size:28px;line-height:50px;text-align:center;font-weight:900;
-              font-style:italic;">D</div>
+            <img
+              src="https://jerseydodgers.com/assets/d-mark.png"
+              width="52"
+              alt="Jersey Dodgers"
+              style="display:block;width:52px;max-width:52px;height:auto;border:0;outline:none;text-decoration:none;"
+            >
           </td>
           <td valign="middle">
             <div style="font-size:11px;letter-spacing:2.4px;color:#8b93a1;
