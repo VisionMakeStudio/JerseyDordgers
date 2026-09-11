@@ -7014,10 +7014,47 @@
       "title": "2025 regular season champions",
       "caption": "Celebrating the Jersey Dodgers team and a season to remember.",
       "image": "/assets/2025-champions.jpg",
+      "video": "",
       "link": "",
       "category": "Photos",
       "date": "2025",
+      "photographerName": "",
+      "photographerInstagram": "",
+      "featured": true,
+      "featureOrder": 1,
       "published": true
+    }
+  ],
+  "channels": [
+    {
+      "id": "youtube",
+      "name": "Jersey Dodgers on YouTube",
+      "eyebrow": "OFFICIAL YOUTUBE",
+      "description": "Introductions, game highlights and team stories.",
+      "logo": "",
+      "link": "https://youtube.com/@JerseyDodgers?si=FP33CxgYEcQ_az5B",
+      "order": 1,
+      "active": true
+    },
+    {
+      "id": "instagram",
+      "name": "@jerseydodgers",
+      "eyebrow": "OFFICIAL INSTAGRAM",
+      "description": "Photos, highlights and game-day posts.",
+      "logo": "",
+      "link": "https://www.instagram.com/jerseydodgers/",
+      "order": 2,
+      "active": true
+    },
+    {
+      "id": "gamechanger",
+      "name": "Jersey Dodgers on GameChanger",
+      "eyebrow": "LIVE SCORES & STREAMS",
+      "description": "Follow the team and open live broadcasts.",
+      "logo": "",
+      "link": "",
+      "order": 3,
+      "active": true
     }
   ],
   "sponsors": []
