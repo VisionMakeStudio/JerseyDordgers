@@ -7,6 +7,7 @@
   let media = [];
   let mediaById = new Map();
   let rosterPlayers = [];
+  let siteData = null;
 
   const clamp = (n, min, max) => Math.max(min, Math.min(max, Number(n) || min));
 
@@ -125,6 +126,7 @@
       const response = await fetch('/api/content', { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
+      siteData = data;
       media = data.media || [];
       mediaById = new Map(media.map(item => [String(item.id), item]));
       rosterPlayers = data.players || [];
@@ -375,7 +377,14 @@
       : `<div class="jd-photo-credit-compact">${inside}</div>`;
   }
 
-  function latestVideoItems(limit = 3) {
+  function featuredVideoItems(limit = 3) {
+    const featured = [...media]
+      .filter(item => item?.category === 'Video' && item?.featured)
+      .sort((a, b) => Number(a.featureOrder || 99) - Number(b.featureOrder || 99))
+      .slice(0, limit);
+
+    if (featured.length) return featured;
+
     return [...media]
       .filter(item => item?.category === 'Video')
       .sort((a, b) => (Date.parse(b.date) || 0) - (Date.parse(a.date) || 0))
@@ -395,43 +404,39 @@
     return card;
   }
 
-  function installHomepageVideoSection() {
+  function syncWatchFeaturedVideos() {
+    // V6 temporarily created a second "Dodgers Media / Latest Videos" section.
+    // Remove it permanently; the user wants only the clean row under Watch & Follow.
+    document.querySelector('.jd-home-videos')?.remove();
+
     const watch = document.querySelector('.watch-section');
     if (!watch) return;
 
-    let section = document.querySelector('.jd-home-videos');
-
-    const videos = latestVideoItems(3);
+    const videos = featuredVideoItems(3);
+    let grid = watch.querySelector('.latest-video-grid');
 
     if (!videos.length) {
-      section?.remove();
+      grid?.remove();
       return;
     }
 
-    if (!section) {
-      section = document.createElement('section');
-      section.className = 'jd-home-videos';
-      watch.insertAdjacentElement('afterend', section);
+    if (!grid) {
+      grid = document.createElement('div');
+      grid.className = 'latest-video-grid';
+      watch.append(grid);
     }
 
     const signature = videos.map(v => v.id).join('|');
-    if (section.dataset.jdSignature === signature) return;
-    section.dataset.jdSignature = signature;
+    if (grid.dataset.jdSignature === signature && grid.dataset.jdFeaturedReady === '1') {
+      updateVideoGrid(grid);
+      return;
+    }
 
-    section.innerHTML = `
-      <div class="section-head jd-video-section-head">
-        <div>
-          <span class="eyebrow">DODGERS MEDIA</span>
-          <h2>LATEST VIDEOS</h2>
-        </div>
-        <a href="/videos/">All videos</a>
-      </div>
-      <div class="jd-home-video-grid"></div>
-    `;
+    grid.dataset.jdSignature = signature;
+    grid.dataset.jdFeaturedReady = '1';
+    grid.replaceChildren();
 
-    const grid = section.querySelector('.jd-home-video-grid');
     videos.forEach(item => grid.append(makeHomepageVideoCard(item)));
-
     updateVideoGrid(grid);
   }
 
@@ -462,6 +467,273 @@
 
       card.querySelector('.media-copy')?.remove();
     });
+  }
+
+
+  function selectedSeasonId() {
+    return document.querySelector('#season-select')?.value || siteData?.settings?.currentSeason || '';
+  }
+
+  function seasonRosterPlayers() {
+    if (!siteData) return [];
+
+    const sid = selectedSeasonId();
+    const ids = new Set([
+      ...(siteData.stats || []).filter(s => s.season === sid).map(s => s.player),
+      ...(siteData.spotlights || []).filter(s => s.season === sid).map(s => s.player)
+    ]);
+
+    const roster = ids.size
+      ? (siteData.players || []).filter(p => ids.has(p.id))
+      : (siteData.players || []).filter(p => p.active);
+
+    const numberValue = value => {
+      const m = String(value || '').match(/\d+/);
+      return m ? Number(m[0]) : 9999;
+    };
+
+    return [...roster].sort((a, b) =>
+      numberValue(a.number) - numberValue(b.number) ||
+      String(a.name || '').localeCompare(String(b.name || ''))
+    );
+  }
+
+  function rebuildSeasonRoster() {
+    const [route, id] = location.pathname.split('/').filter(Boolean);
+    if (route !== 'roster' || id || !siteData) return;
+
+    const wrap = document.querySelector('#main .wrap');
+    if (!wrap) return;
+
+    const headingNode = [...wrap.querySelectorAll('.section-head')]
+      .find(node => /meet the dodgers/i.test(node.textContent || ''));
+    if (!headingNode) return;
+
+    const roster = seasonRosterPlayers();
+    const signature = `${selectedSeasonId()}|${roster.map(p => p.id).join(',')}`;
+
+    let grid = wrap.querySelector('.roster-grid');
+    if (grid?.dataset.jdRosterSignature === signature) return;
+
+    // Remove the core renderer's roster/empty/pagination after the heading.
+    let next = headingNode.nextElementSibling;
+    while (next) {
+      const remove = next;
+      next = next.nextElementSibling;
+      if (
+        remove.classList.contains('roster-grid') ||
+        remove.classList.contains('pagination') ||
+        remove.classList.contains('empty')
+      ) remove.remove();
+    }
+
+    if (!roster.length) {
+      const emptyState = document.createElement('div');
+      emptyState.className = 'empty';
+      emptyState.innerHTML =
+        '<h3>Roster not published</h3><p>The team will announce this season’s roster here.</p>';
+      headingNode.insertAdjacentElement('afterend', emptyState);
+      return;
+    }
+
+    grid = document.createElement('div');
+    grid.className = 'roster-grid';
+    grid.dataset.jdRosterSignature = signature;
+
+    roster.forEach(playerItem => {
+      const card = document.createElement('a');
+      card.className = 'player-card';
+      card.href = `/roster/${encodeURIComponent(playerItem.id)}/`;
+
+      if (playerItem.photo) {
+        const image = document.createElement('img');
+        image.src = playerItem.photo;
+        image.alt = playerItem.name || 'Jersey Dodgers player';
+        image.loading = 'lazy';
+        card.append(image);
+      } else {
+        const number = document.createElement('div');
+        number.className = 'player-number';
+        number.textContent = playerItem.number || '—';
+        card.append(number);
+      }
+
+      const copy = document.createElement('div');
+      copy.innerHTML = `
+        <small>#${escapeHtml(playerItem.number || '')} ${escapeHtml(playerItem.position || '')}</small>
+        <h3>${escapeHtml(playerItem.name || '')}</h3>
+        <span>Player profile</span>
+      `;
+      card.append(copy);
+      grid.append(card);
+    });
+
+    headingNode.insertAdjacentElement('afterend', grid);
+  }
+
+  function statNumber(value) {
+    const n = Number(String(value ?? '').replace(/,/g, '').trim());
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function ipToOuts(value) {
+    const raw = String(value ?? '0').trim();
+    if (!raw || raw === '-') return 0;
+    const [wholePart, fracPart = '0'] = raw.split('.');
+    const whole = Number(wholePart) || 0;
+    const frac = Math.max(0, Math.min(2, Number(fracPart[0]) || 0));
+    return whole * 3 + frac;
+  }
+
+  function outsToIp(outs) {
+    const safe = Math.max(0, Math.round(outs || 0));
+    return `${Math.floor(safe / 3)}.${safe % 3}`;
+  }
+
+  function rate3(value) {
+    if (!Number.isFinite(value)) return '-';
+    const fixed = Math.max(0, value).toFixed(3);
+    return fixed.startsWith('0.') ? fixed.slice(1) : fixed;
+  }
+
+  function totalKey(stats, group, key) {
+    return stats.reduce((sum, item) => sum + statNumber(item?.[group]?.[key]), 0);
+  }
+
+  function aggregateStats(stats) {
+    const bat = {};
+    const pitch = {};
+    const fielding = {};
+
+    const batCountKeys = [
+      'GP','PA','AB','H','1B','2B','3B','HR','RBI','R','BB','SO','HBP','SAC','SF',
+      'ROE','FC','SB','CS','QAB','HHB','LOB','2OUTRBI','XBH','TB','PS','2S+3','6+',
+      'GIDP','GITP','CI'
+    ];
+    batCountKeys.forEach(k => bat[k] = String(totalKey(stats, 'bat', k)));
+
+    const ab = statNumber(bat.AB);
+    const h = statNumber(bat.H);
+    const bb = statNumber(bat.BB);
+    const hbp = statNumber(bat.HBP);
+    const sf = statNumber(bat.SF);
+    const tb = statNumber(bat.TB) ||
+      statNumber(bat['1B']) + 2 * statNumber(bat['2B']) + 3 * statNumber(bat['3B']) + 4 * statNumber(bat.HR);
+
+    bat.TB = String(tb);
+    bat.AVG = ab ? rate3(h / ab) : '-';
+    const obpDen = ab + bb + hbp + sf;
+    bat.OBP = obpDen ? rate3((h + bb + hbp) / obpDen) : '-';
+    bat.SLG = ab ? rate3(tb / ab) : '-';
+    bat.OPS = (bat.OBP !== '-' && bat.SLG !== '-')
+      ? rate3(statNumber(bat.OBP) + statNumber(bat.SLG))
+      : '-';
+
+    const pitchCountKeys = ['GP','GS','BF','#P','W','L','SV','SVO','BS','H','R','ER','BB','SO','HBP','LOB','BK','PIK','CS','SB','WP','HR'];
+    pitchCountKeys.forEach(k => pitch[k] = String(totalKey(stats, 'pitch', k)));
+
+    const outs = stats.reduce((sum, item) => sum + ipToOuts(item?.pitch?.IP), 0);
+    const innings = outs / 3;
+    pitch.IP = outsToIp(outs);
+    pitch.ERA = innings ? rate3((statNumber(pitch.ER) * 7) / innings) : '-';
+    pitch.WHIP = innings ? rate3((statNumber(pitch.H) + statNumber(pitch.BB)) / innings) : '-';
+
+    const fieldCountKeys = ['TC','A','PO','E','DP','TP','PB','SB','SBATT','CS','PIK','CI'];
+    fieldCountKeys.forEach(k => fielding[k] = String(totalKey(stats, 'fielding', k)));
+    fielding.INN = outsToIp(stats.reduce((sum, item) => sum + ipToOuts(item?.fielding?.INN), 0));
+    const tc = statNumber(fielding.TC);
+    fielding.FPCT = tc ? rate3((statNumber(fielding.A) + statNumber(fielding.PO)) / tc) : '-';
+
+    return { bat, pitch, fielding };
+  }
+
+  function careerTable(playerItem, summary, group) {
+    const keys = group === 'bat'
+      ? ['GP','PA','AB','H','AVG','OBP','OPS','HR','RBI','R','SB']
+      : group === 'pitch'
+        ? ['IP','W','L','SV','H','ER','BB','SO','ERA','WHIP']
+        : ['TC','PO','A','E','FPCT','DP'];
+
+    return `
+      <div class="table-scroll jd-career-table">
+        <table>
+          <thead><tr><th>PLAYER</th>${keys.map(k => `<th>${k}</th>`).join('')}</tr></thead>
+          <tbody>
+            <tr>
+              <th>${escapeHtml(playerItem.name || '')}</th>
+              ${keys.map(k => `<td>${escapeHtml(summary?.[group]?.[k] ?? '—')}</td>`).join('')}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function enhanceCareerStats() {
+    const [route, id] = location.pathname.split('/').filter(Boolean);
+    if (route !== 'roster' || !id || !siteData) return;
+
+    const profile = document.querySelector('.player-profile');
+    if (!profile || document.querySelector('.jd-career-summary')) return;
+
+    const playerItem = (siteData.players || []).find(p => String(p.id) === String(id));
+    const playerStats = (siteData.stats || []).filter(s => String(s.player) === String(id));
+    if (!playerItem || !playerStats.length) return;
+
+    const seasonById = new Map((siteData.seasons || []).map(s => [s.id, s]));
+    const years = [...new Set(
+      playerStats
+        .map(s => seasonById.get(s.season)?.name?.match(/\b(20\d{2})\b/)?.[1])
+        .filter(Boolean)
+    )].sort((a, b) => Number(b) - Number(a));
+
+    const section = document.createElement('section');
+    section.className = 'jd-career-summary';
+    section.innerHTML = `
+      <div class="section-head jd-career-head">
+        <div>
+          <span class="eyebrow">PLAYER HISTORY</span>
+          <h2>Career stats</h2>
+        </div>
+        <label class="jd-career-view">
+          View
+          <select>
+            <option value="career">Career</option>
+            ${years.map(year => `<option value="${year}">${year} total</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div class="jd-career-content"></div>
+    `;
+
+    profile.insertAdjacentElement('afterend', section);
+
+    const select = section.querySelector('select');
+    const content = section.querySelector('.jd-career-content');
+
+    const paint = () => {
+      const value = select.value;
+      const chosen = value === 'career'
+        ? playerStats
+        : playerStats.filter(s => seasonById.get(s.season)?.name?.includes(value));
+
+      const total = aggregateStats(chosen);
+      const hasPitch = chosen.some(s => ipToOuts(s?.pitch?.IP) > 0);
+      const hasField = chosen.some(s => Object.values(s?.fielding || {}).some(v => statNumber(v) > 0));
+
+      content.innerHTML = `
+        <div class="jd-career-label">
+          <strong>${value === 'career' ? 'CAREER TOTAL' : `${escapeHtml(value)} TOTAL`}</strong>
+          <span>${chosen.length} season${chosen.length === 1 ? '' : 's'}</span>
+        </div>
+        ${careerTable(playerItem, total, 'bat')}
+        ${hasPitch ? careerTable(playerItem, total, 'pitch') : ''}
+        ${hasField ? careerTable(playerItem, total, 'fielding') : ''}
+      `;
+    };
+
+    select.addEventListener('change', paint);
+    paint();
   }
 
   function redesignRosterCards() {
@@ -590,9 +862,11 @@
   function enhanceNow() {
     enhanceVideos();
     enhanceFeaturedPhotos();
-    installHomepageVideoSection();
+    syncWatchFeaturedVideos();
     cleanMediaPhotoCards();
+    rebuildSeasonRoster();
     redesignRosterCards();
+    enhanceCareerStats();
     fixLightbox();
   }
 

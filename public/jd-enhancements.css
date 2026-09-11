@@ -980,3 +980,416 @@
     font-size:7px;
   }
 }
+
+
+/* ======================================================
+   V7 — CLEAN WATCH VIDEO ROW
+   ====================================================== */
+
+/* V6 created this as a temporary duplicate. It is now intentionally gone. */
+.jd-home-videos{display:none!important}
+
+.watch-section .latest-video-grid{
+  margin-top:16px;
+}
+
+/* ======================================================
+   V7 — MEDIA ADMIN CLEANUP + ACTION MENUS
+   ====================================================== */
+
+.jd-hidden-admin-field,
+.jd-conditional-hidden,
+.jd-original-media-upload{
+  display:none!important;
+}
+
+.jd-unified-upload{
+  border:1px dashed #405976;
+  background:#0d1724;
+  padding:16px;
+  border-radius:7px;
+  display:grid!important;
+  gap:8px;
+}
+
+.jd-unified-upload>span:first-child{
+  color:#fff;
+  font-weight:800;
+}
+
+.jd-unified-upload small{
+  color:#899bb1;
+  font-size:11px;
+}
+
+.jd-unified-upload input[type=file]{
+  width:100%;
+}
+
+.jd-unified-file-name{
+  color:#8bc5ff;
+  font-size:11px;
+  overflow-wrap:anywhere;
+}
+
+.jd-feature-group-label{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin:16px 0 7px;
+  padding:8px 10px;
+  border-left:3px solid #52657c;
+  color:#9cacc0;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.14em;
+}
+
+.jd-feature-group-label.photo{border-left-color:#39d98a;color:#79e9ae}
+.jd-feature-group-label.video{border-left-color:#9b7cff;color:#b9a7ff}
+.jd-feature-group-label.all{margin-top:22px}
+
+.jd-featured-photo-row{
+  box-shadow:inset 3px 0 0 #39d98a;
+}
+
+.jd-featured-video-row{
+  box-shadow:inset 3px 0 0 #9b7cff;
+}
+
+.jd-featured-dot.photo{background:#39d98a!important}
+.jd-featured-dot.video{background:#9b7cff!important}
+
+.jd-row-actions{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-left:auto;
+}
+
+.jd-action-feature{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:8px;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:.08em;
+  white-space:nowrap;
+}
+
+.jd-action-feature.photo{
+  color:#8df2bc;
+  background:#153d2d;
+  border:1px solid #2c7e5b;
+}
+
+.jd-action-feature.video{
+  color:#c5b6ff;
+  background:#2b2347;
+  border:1px solid #6951ba;
+}
+
+.jd-actions-menu{
+  position:relative;
+}
+
+.jd-actions-menu>summary{
+  list-style:none;
+  min-width:88px;
+  text-align:center;
+  border:1px solid #43546b;
+  border-radius:5px;
+  padding:8px 12px;
+  background:#111b29;
+  color:#e9f1fb;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.jd-actions-menu>summary::-webkit-details-marker{display:none}
+
+.jd-actions-menu[open]>summary{
+  border-color:#168bff;
+}
+
+.jd-actions-popover{
+  position:absolute;
+  z-index:40;
+  top:calc(100% + 6px);
+  right:0;
+  width:190px;
+  padding:6px;
+  background:#0c131e;
+  border:1px solid #40526a;
+  border-radius:7px;
+  box-shadow:0 16px 36px #000b;
+}
+
+.jd-actions-popover button{
+  display:block;
+  width:100%;
+  border:0;
+  background:transparent;
+  color:#dce7f4;
+  text-align:left;
+  padding:10px;
+  border-radius:4px;
+  font-size:11px;
+}
+
+.jd-actions-popover button:hover{
+  background:#172438;
+  color:#fff;
+}
+
+.jd-feature-dialog{
+  width:min(520px,calc(100% - 28px));
+  padding:28px;
+}
+
+.jd-feature-dialog h2{
+  margin:10px 0;
+}
+
+.jd-feature-dialog p{
+  margin-bottom:18px;
+}
+
+.jd-slot-choices{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+
+.jd-slot-choices button{
+  padding:12px 8px;
+  border:1px solid #566a83;
+  background:#132033;
+  border-radius:5px;
+}
+
+/* ======================================================
+   V7 — GAMECHANGER IMPORT
+   ====================================================== */
+
+.jd-import-heading h2{
+  margin:8px 0 10px;
+}
+
+.jd-import-heading p{
+  max-width:720px;
+}
+
+.jd-import-form{
+  margin-top:22px;
+  display:grid;
+  gap:15px;
+}
+
+.jd-import-form>label{
+  display:grid;
+  gap:7px;
+  color:#b4c2d4;
+  font-size:12px;
+}
+
+.jd-import-note,
+#jd-import-message{
+  font-size:11px;
+  color:#8fa0b4;
+}
+
+.jd-import-summary{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+
+.jd-import-summary>div{
+  padding:14px;
+  background:#0c1521;
+  border:1px solid #314157;
+  border-radius:6px;
+  display:grid;
+  gap:2px;
+}
+
+.jd-import-summary strong{
+  color:#fff;
+  font-size:24px;
+}
+
+.jd-import-summary span{
+  color:#91a3b8;
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+}
+
+.jd-import-summary .needs-review{
+  border-color:#a57a24;
+  background:#2b2213;
+}
+
+.jd-import-season-confirm{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 14px;
+  border-left:3px solid #168bff;
+  background:#111b29;
+  margin-top:10px;
+}
+
+.jd-import-season-confirm span{
+  color:#8fa0b4;
+  font-size:10px;
+}
+
+.jd-review-list{
+  margin-top:14px;
+  display:grid;
+  gap:8px;
+}
+
+.jd-review-list>p{
+  font-size:11px;
+}
+
+.jd-review-row{
+  display:grid!important;
+  grid-template-columns:minmax(180px,.8fr) minmax(240px,1.2fr);
+  align-items:center;
+  gap:12px;
+  padding:10px;
+  background:#121a26;
+  border:1px solid #3a485b;
+  border-radius:5px;
+}
+
+.jd-review-row>span{
+  display:grid;
+}
+
+.jd-review-row strong{
+  color:#fff;
+}
+
+.jd-review-row small{
+  color:#91a3b8;
+}
+
+.jd-import-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+/* ======================================================
+   V7 — CAREER / YEAR TOTALS
+   ====================================================== */
+
+.jd-career-summary{
+  margin:0 0 40px;
+  padding:22px;
+  background:linear-gradient(130deg,#111d2d,#0d141f);
+  border:1px solid #2d4057;
+  border-top:3px solid #168bff;
+}
+
+.jd-career-head{
+  margin-bottom:14px;
+}
+
+.jd-career-view{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#91a3b8;
+  font-size:10px;
+}
+
+.jd-career-view select{
+  min-height:36px;
+  padding:7px 28px 7px 9px;
+}
+
+.jd-career-content{
+  display:grid;
+  gap:12px;
+}
+
+.jd-career-label{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+}
+
+.jd-career-label strong{
+  font:italic 22px Impact,'Arial Narrow',sans-serif;
+  color:#9dc8ff;
+}
+
+.jd-career-label span{
+  color:#8394aa;
+  font-size:10px;
+}
+
+.jd-career-table{
+  margin:0;
+}
+
+/* ======================================================
+   V7 — RESPONSIVE ADMIN
+   ====================================================== */
+
+@media(max-width:700px){
+  .jd-row-actions{
+    gap:5px;
+  }
+
+  .jd-action-feature{
+    font-size:7px;
+    padding:4px 6px;
+  }
+
+  .jd-actions-menu>summary{
+    min-width:72px;
+    padding:8px;
+  }
+
+  .jd-actions-popover{
+    width:175px;
+  }
+
+  .jd-slot-choices{
+    grid-template-columns:1fr;
+  }
+
+  .jd-import-summary{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .jd-import-season-confirm{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .jd-review-row{
+    grid-template-columns:1fr;
+  }
+
+  .jd-career-summary{
+    padding:16px;
+  }
+
+  .jd-career-head{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}
