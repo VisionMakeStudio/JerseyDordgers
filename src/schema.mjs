@@ -29,5 +29,5 @@ export const contentSchema=z.object({settings:schemas.settings,seasons:z.array(s
  for(const s of d.spotlights){if(!has('seasons',s.season)||!has('players',s.player))fail('A player spotlight references a missing player or season')}
  const keys=d.stats.map(s=>s.season+':'+s.player);if(new Set(keys).size!==keys.length)fail('Only one stats entry per player and season is allowed');
 });
-export function canEdit(user,adminEmail){return Boolean(user?.confirmedAt&&adminEmail&&user.email?.toLowerCase()===adminEmail.toLowerCase())}
+export function canEdit(user,adminEmail){return Boolean(user?.id&&adminEmail&&user.email?.toLowerCase()===adminEmail.toLowerCase())}
 export function publicContent(data){return {...data,media:data.media.filter(x=>x.published),sponsors:data.sponsors.filter(x=>x.active),spotlights:data.spotlights.filter(x=>x.published)}}

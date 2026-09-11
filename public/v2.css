@@ -36,3 +36,20 @@ header{display:block;padding:0;min-height:0;border-bottom:1px solid var(--line)}
  .game-row{grid-template-columns:1fr 1fr}.game-row>span{display:none}.roster-grid{grid-template-columns:1fr 1fr}.player-card .player-number{height:150px}.player-card img{height:180px}.pagination button{min-height:42px}
  dialog{max-width:calc(100% - 22px);padding:18px}#form-dialog{padding:22px}#form-dialog h2{font-size:28px}
 }
+
+.mobile-nav-head,#menu-backdrop{display:none}
+.game-row{display:grid;grid-template-columns:180px minmax(300px,1fr) 240px;gap:26px;padding:0;overflow:hidden;background:linear-gradient(120deg,#111c2b,#0d141e);border-left:3px solid var(--blue)}
+.game-row-meta{display:flex;flex-direction:column;justify-content:center;gap:16px;padding:24px;border-right:1px solid var(--line)}
+.game-row-meta small{margin-top:5px}.game-status{align-self:flex-start;padding:5px 9px;background:#16253a;color:#9fb3cc;font-size:10px;letter-spacing:1px;font-weight:800}.game-status.final{background:#17467a;color:#dcecff}
+.schedule-matchup{display:grid;align-content:center;padding:18px 0}.schedule-team{display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:56px}.schedule-team+ .schedule-team{border-top:1px solid #ffffff12}.schedule-team .mark,.schedule-team .monogram{width:34px;height:34px}.schedule-team strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.schedule-team>b{font-size:23px}
+.game-row-footer{display:flex;flex-direction:column;justify-content:center;gap:13px;padding:24px;border-left:1px solid var(--line)}.game-row-footer span{font-size:12px;color:var(--muted)}.game-row-footer strong{font-size:12px;color:#8bc4ff;letter-spacing:.6px}
+
+@media(max-width:700px){
+ body.menu-open{overflow:hidden}
+ #menu-backdrop{display:none;position:fixed;inset:0;border:0;background:#000b;z-index:900}.menu-open #menu-backdrop{display:block}
+ .mobile-nav-head{display:flex;align-items:center;justify-content:space-between;width:100%;padding:22px 4px 18px;border-bottom:1px solid var(--line);margin-bottom:6px}.mobile-nav-head span{color:#7ebaff;font-size:10px;letter-spacing:1.5px;font-weight:800}.mobile-nav-head button{background:#17243a;border:1px solid #40516a;border-radius:4px;padding:8px 11px;font-size:11px}
+ .header-main nav{display:flex;position:fixed;top:0;right:0;bottom:0;z-index:1000;visibility:hidden;transform:translateX(105%);transition:transform .25s ease,visibility .25s;flex-direction:column;flex-wrap:nowrap;gap:0;width:min(84vw,330px);height:100dvh;padding:0 20px 30px;background:linear-gradient(160deg,#111c2b,#080c12 70%);border:0;box-shadow:-16px 0 50px #000c}
+ .header-main nav.open{visibility:visible;transform:translateX(0)}
+ .header-main nav a{width:100%;padding:16px 5px;border-bottom:1px solid #263447;font-size:16px;font-weight:800}.header-main nav a.active{color:#7ebaff;border-bottom-color:#263447}.header-main nav a.active:after{content:'CURRENT';float:right;font-size:8px;letter-spacing:1px;color:#7ebaff;margin-top:6px}
+ .game-list{gap:14px}.game-row{grid-template-columns:1fr;gap:0;width:100%;padding:0}.game-row-meta{flex-direction:row;justify-content:space-between;align-items:center;padding:14px 16px;border-right:0;border-bottom:1px solid var(--line)}.game-status{align-self:center}.schedule-matchup{padding:8px 16px}.schedule-team{grid-template-columns:36px minmax(0,1fr) auto;min-height:52px}.schedule-team .mark,.schedule-team .monogram{width:32px;height:32px}.schedule-team strong{font-size:14px}.schedule-team>b{font-size:22px}.game-row-footer{flex-direction:row;justify-content:space-between;align-items:center;padding:13px 16px;border-left:0;border-top:1px solid var(--line)}.game-row-footer span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
