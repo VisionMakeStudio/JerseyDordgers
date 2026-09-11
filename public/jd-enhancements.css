@@ -1,132 +1,191 @@
-/* Jersey Dodgers media + featured photo enhancements */
+/* Jersey Dodgers — safe media enhancements v2 */
 
-/* Video cards: actual inline playback */
+/* -------------------------------------------------------
+   VIDEO
+   Let uploaded videos use their real ratio instead of forcing
+   every clip into the same landscape rectangle.
+-------------------------------------------------------- */
+.media-grid{
+  align-items:start;
+}
+.media-card.jd-video-card{
+  overflow:hidden;
+}
+.media-card.jd-video-card .media-copy{
+  border-top:1px solid #253448;
+}
 .media-video{
-  display:block;
-  width:100%;
-  max-width:100%;
-  aspect-ratio:16/9;
-  object-fit:cover;
-  background:#000;
+  display:block!important;
+  width:100%!important;
+  height:auto!important;
+  max-width:100%!important;
+  max-height:none!important;
+  aspect-ratio:auto!important;
+  object-fit:contain!important;
+  object-position:center center!important;
+  background:#020407;
 }
 .video-frame{
   position:relative;
   width:100%;
-  aspect-ratio:16/9;
   overflow:hidden;
-  background:#000;
+  background:#020407;
+}
+.video-frame.jd-video-frame-landscape{
+  aspect-ratio:16/9!important;
+}
+.video-frame.jd-video-frame-portrait{
+  aspect-ratio:9/16!important;
 }
 .video-frame iframe{
   position:absolute;
   inset:0;
-  width:100%;
-  height:100%;
+  display:block;
+  width:100%!important;
+  height:100%!important;
   border:0;
 }
 
-/* Featured homepage gallery gets a consistent photo-friendly ratio. */
-.clubhouse-photo{
+/* A portrait clip fills the card width, so you don't get a tiny
+   vertical video floating in a huge 16:9 black box. */
+.jd-video-portrait .media-video{
+  width:100%!important;
   height:auto!important;
-  aspect-ratio:4/3;
+}
+.latest-video-grid .media-grid,
+body:has(.video-page-empty) .media-grid{
+  align-items:start;
+}
+
+/* -------------------------------------------------------
+   HOMEPAGE FEATURED PHOTOS
+-------------------------------------------------------- */
+.clubhouse-gallery{
+  align-items:stretch;
+}
+.clubhouse-photo,
+.clubhouse-photo:first-child{
+  height:auto!important;
+  aspect-ratio:4/3!important;
 }
 .clubhouse-photo img{
+  display:block;
+  width:100%;
+  height:100%;
   object-fit:cover!important;
 }
 
-/* Full photo in lightbox: never crop bodies/edges. */
+/* Clicking a photo must show the entire original file. */
 #lightbox{
-  width:min(1100px,calc(100% - 24px));
-  max-height:95vh;
+  width:min(1120px,calc(100% - 24px))!important;
+  max-height:95vh!important;
 }
 #lightbox-content > img{
-  display:block;
+  display:block!important;
   width:auto!important;
   height:auto!important;
   max-width:100%!important;
   max-height:78vh!important;
-  margin:0 auto;
+  margin:0 auto!important;
   object-fit:contain!important;
   object-position:center center!important;
-  background:#070b11;
+  background:#060a10;
 }
 
-/* Admin: green dot on featured homepage photos. */
+/* -------------------------------------------------------
+   ADMIN FEATURED INDICATOR
+-------------------------------------------------------- */
 .admin-media-thumb{
   position:relative;
 }
 .jd-featured-dot{
   position:absolute;
-  top:-4px;
+  z-index:4;
   right:-4px;
-  width:13px;
-  height:13px;
-  border-radius:999px;
-  background:#35d06f;
-  border:2px solid #0d151f;
-  box-shadow:0 0 0 2px #35d06f33,0 0 12px #35d06f66;
-  z-index:3;
+  top:-4px;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:#35da73;
+  border:2px solid #0b121b;
+  box-shadow:0 0 0 2px #35da7338,0 0 14px #35da7380;
 }
-.jd-is-featured .admin-row-info > span:last-child strong::after{
-  content:' FEATURED';
-  margin-left:8px;
-  color:#59dd86;
+.jd-featured-row{
+  border-left-color:#35da73!important;
+}
+.jd-featured-badge{
+  display:inline-flex;
+  align-items:center;
+  width:max-content;
+  margin-top:5px;
+  padding:3px 7px;
+  border:1px solid #35da7355;
+  border-radius:999px;
+  color:#57e48b;
+  background:#123221;
   font-size:9px;
+  font-weight:900;
   letter-spacing:.08em;
-  vertical-align:middle;
 }
 
-/* Admin: drag-to-frame control */
-.jd-focal-control{
+/* -------------------------------------------------------
+   ADMIN DRAG-TO-FRAME
+-------------------------------------------------------- */
+.jd-framing-panel{
   grid-column:1/-1;
-  margin-top:4px;
   padding:18px;
-  border:1px solid #33465e;
-  background:#0b131e;
+  border:1px solid #33475f;
   border-radius:8px;
+  background:linear-gradient(145deg,#0b131e,#101b29);
 }
-.jd-focal-head{
+.jd-framing-heading{
   display:flex;
+  align-items:flex-start;
   justify-content:space-between;
-  align-items:center;
-  gap:16px;
-  margin-bottom:8px;
+  gap:18px;
 }
-.jd-focal-head > div{
-  display:grid;
-  gap:5px;
+.jd-framing-heading h3{
+  margin:5px 0 0;
+  font-size:20px;
 }
-.jd-focal-head strong{
-  font-size:16px;
-}
-.jd-focal-head button{
-  background:#17263a;
-  border:1px solid #425875;
+.jd-framing-heading button{
+  flex:0 0 auto;
+  padding:8px 11px;
+  color:#d9eaff;
+  background:#17283b;
+  border:1px solid #45607e;
   border-radius:5px;
-  padding:8px 12px;
 }
-.jd-focal-control > p{
-  margin:0 0 14px;
+.jd-framing-panel > p{
+  max-width:720px;
+  margin:10px 0 16px;
+  color:#9dabbc;
   font-size:12px;
-  color:#9eacc0;
-  max-width:650px;
 }
-.jd-focus-stage{
+.jd-framing-workspace{
+  display:grid;
+  grid-template-columns:minmax(230px,360px) minmax(210px,1fr);
+  gap:22px;
+  align-items:center;
+}
+.jd-framing-stage{
   position:relative;
-  width:min(340px,100%);
+  width:100%;
   aspect-ratio:1/1;
   overflow:hidden;
-  background:#05090e;
-  border:2px solid #41617f;
-  border-radius:6px;
+  border:2px solid #496683;
+  border-radius:7px;
+  background:#04080d;
   cursor:grab;
   touch-action:none;
   user-select:none;
 }
-.jd-focus-stage.is-dragging{
+.jd-framing-stage.is-dragging{
   cursor:grabbing;
   border-color:#168bff;
+  box-shadow:0 0 0 3px #168bff2e;
 }
-.jd-focus-stage img{
+.jd-framing-stage img{
   display:block;
   width:100%;
   height:100%;
@@ -134,64 +193,98 @@
   pointer-events:none;
   user-select:none;
 }
-.jd-focus-guide{
+.jd-framing-crosshair{
   position:absolute;
   inset:0;
   pointer-events:none;
   background:
     linear-gradient(90deg,transparent calc(50% - .5px),#ffffff55 50%,transparent calc(50% + .5px)),
     linear-gradient(0deg,transparent calc(50% - .5px),#ffffff55 50%,transparent calc(50% + .5px));
-  box-shadow:inset 0 0 0 1px #ffffff18;
 }
-.jd-focus-guide::after{
+.jd-framing-crosshair::after{
   content:'';
   position:absolute;
   left:50%;
   top:50%;
-  width:18px;
-  height:18px;
-  border:2px solid #fff;
+  width:20px;
+  height:20px;
+  border:2px solid white;
   border-radius:50%;
   transform:translate(-50%,-50%);
-  box-shadow:0 0 0 3px #168bff66;
+  box-shadow:0 0 0 4px #168bff5c;
+}
+.jd-drag-tip{
+  position:absolute;
+  left:10px;
+  bottom:10px;
+  padding:5px 7px;
+  color:white;
+  background:#050a10bf;
+  border:1px solid #ffffff30;
+  border-radius:4px;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.12em;
+  pointer-events:none;
+}
+.jd-framing-details{
+  display:grid;
+  gap:13px;
+}
+.jd-framing-details > strong{
+  font-size:16px;
+}
+.jd-framing-details > small{
+  color:#8ea0b7;
+  line-height:1.5;
+}
+.jd-framing-details label{
+  display:grid;
+  gap:7px;
+  color:#b9c8d9;
+  font-size:12px;
+}
+.jd-framing-details input[type=range]{
+  width:100%;
+  min-height:0;
+  padding:0;
+  accent-color:#168bff;
 }
 .jd-focus-readout{
-  margin-top:9px;
-  color:#8295ad;
+  color:#8fc6ff;
   font-size:11px;
 }
-.jd-focus-readout b{
-  color:#bfe0ff;
-}
-.jd-no-image .jd-focus-stage::after{
-  content:'Upload/select a photo first';
+.jd-no-feature-image .jd-framing-stage::after{
+  content:'Upload or select a photo first';
   position:absolute;
   inset:0;
   display:grid;
   place-items:center;
-  color:#8393a8;
+  padding:20px;
+  text-align:center;
+  color:#8a9ab0;
+  background:#070c12;
   font-size:12px;
 }
-.jd-no-image .jd-focus-stage img{
+.jd-no-feature-image .jd-framing-stage img,
+.jd-no-feature-image .jd-framing-crosshair,
+.jd-no-feature-image .jd-drag-tip{
   display:none;
 }
 
 @media(max-width:700px){
-  .clubhouse-photo{
-    height:auto!important;
-    aspect-ratio:4/3;
-  }
+  .clubhouse-photo,
   .clubhouse-photo:first-child{
     height:auto!important;
-    aspect-ratio:4/3;
+    aspect-ratio:4/3!important;
+  }
+  .jd-framing-workspace{
+    grid-template-columns:1fr;
+  }
+  .jd-framing-panel{
+    padding:14px;
   }
   #lightbox-content > img{
     max-height:72vh!important;
-  }
-  .jd-focal-control{
-    padding:14px;
-  }
-  .jd-focus-stage{
-    width:100%;
   }
 }

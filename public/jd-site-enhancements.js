@@ -1,123 +1,202 @@
 (() => {
+  'use strict';
+
   const FOCUS_RE = /\[\[JD_FOCUS:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
+  let media = [];
   let mediaById = new Map();
-  let contentLoaded = false;
 
-  const clamp = value => Math.max(0, Math.min(100, Number(value) || 50));
+  const clamp = n => Math.max(0, Math.min(100, Number(n) || 50));
 
-  function readFocus(caption = '') {
+  function parseFocus(caption = '') {
     FOCUS_RE.lastIndex = 0;
     const match = FOCUS_RE.exec(String(caption || ''));
     FOCUS_RE.lastIndex = 0;
     return match ? { x: clamp(match[1]), y: clamp(match[2]) } : { x: 50, y: 50 };
   }
 
-  function cleanCaption(value = '') {
+  function stripFocusMarker(html = '') {
     FOCUS_RE.lastIndex = 0;
-    const cleaned = String(value || '').replace(FOCUS_RE, '').replace(/\n{3,}/g, '\n\n').trim();
+    const clean = String(html || '').replace(FOCUS_RE, '').trim();
     FOCUS_RE.lastIndex = 0;
-    return cleaned;
+    return clean;
+  }
+
+  function youtubeId(url = '') {
+    try {
+      const u = new URL(url, location.href);
+      if (u.hostname === 'youtu.be') return u.pathname.split('/')[1] || '';
+      if (/(^|\.)youtube\.com$/i.test(u.hostname)) {
+        if (u.pathname === '/watch') return u.searchParams.get('v') || '';
+        return u.pathname.match(/^\/(?:shorts|embed)\/([^/?]+)/)?.[1] || '';
+      }
+    } catch {}
+    return '';
+  }
+
+  function isYouTubeShort(url = '') {
+    try {
+      const u = new URL(url, location.href);
+      return /(^|\.)youtube\.com$/i.test(u.hostname) && /^\/shorts\//.test(u.pathname);
+    } catch {
+      return false;
+    }
   }
 
   async function loadContent() {
     try {
-      const response = await fetch('/api/content', { credentials: 'same-origin' });
+      const response = await fetch('/api/content');
       if (!response.ok) return;
       const data = await response.json();
-      mediaById = new Map((data.media || []).map(item => [String(item.id), item]));
-      contentLoaded = true;
-      enhancePage(document);
+      media = data.media || [];
+      mediaById = new Map(media.map(item => [String(item.id), item]));
+      scheduleEnhance();
     } catch {}
   }
 
-  function prepDirectVideo(video) {
+  function itemForCard(card) {
+    const title = card.querySelector('.media-copy h3')?.textContent?.trim();
+    if (!title) return null;
+    return media.find(item => item.title === title) || null;
+  }
+
+  function setupDirectVideo(video, item) {
     if (!(video instanceof HTMLVideoElement)) return;
+
     video.muted = true;
     video.defaultMuted = true;
     video.autoplay = true;
     video.loop = true;
     video.playsInline = true;
     video.controls = true;
+    video.preload = 'metadata';
+
     video.setAttribute('muted', '');
     video.setAttribute('autoplay', '');
     video.setAttribute('loop', '');
     video.setAttribute('playsinline', '');
-    const tryPlay = () => {
+
+    const card = video.closest('.media-card');
+    card?.classList.add('jd-video-card');
+
+    const classify = () => {
+      if (!video.videoWidth || !video.videoHeight) return;
+      card?.classList.remove('jd-video-portrait', 'jd-video-landscape', 'jd-video-square');
+      const ratio = video.videoWidth / video.videoHeight;
+      if (ratio < 0.8) card?.classList.add('jd-video-portrait');
+      else if (ratio > 1.2) card?.classList.add('jd-video-landscape');
+      else card?.classList.add('jd-video-square');
+    };
+
+    if (video.readyState >= 1) classify();
+    else video.addEventListener('loadedmetadata', classify, { once: true });
+
+    const play = () => {
       video.muted = true;
       video.play().catch(() => {});
     };
-    if (video.readyState >= 2) tryPlay();
-    else video.addEventListener('canplay', tryPlay, { once: true });
+    if (video.readyState >= 2) play();
+    else video.addEventListener('canplay', play, { once: true });
   }
 
-  function prepYouTube(frame) {
-    if (!(frame instanceof HTMLIFrameElement) || frame.dataset.jdEnhanced === '1') return;
+  function setupYouTube(frame, item) {
+    if (!(frame instanceof HTMLIFrameElement)) return;
+    if (frame.dataset.jdPrepared === '1') return;
+
+    const card = frame.closest('.media-card');
+    const wrapper = frame.closest('.video-frame');
+    card?.classList.add('jd-video-card');
+
+    const id = youtubeId(item?.link || '') || (() => {
+      try {
+        return new URL(frame.src).pathname.match(/\/embed\/([^/?]+)/)?.[1] || '';
+      } catch {
+        return '';
+      }
+    })();
+
+    if (isYouTubeShort(item?.link || '')) {
+      card?.classList.add('jd-video-portrait');
+      wrapper?.classList.add('jd-video-frame-portrait');
+    } else {
+      card?.classList.add('jd-video-landscape');
+      wrapper?.classList.add('jd-video-frame-landscape');
+    }
+
+    if (!id) return;
+
     try {
       const url = new URL(frame.src, location.href);
-      if (!/(^|\.)youtube-nocookie\.com$|(^|\.)youtube\.com$/i.test(url.hostname)) return;
-      const id = url.pathname.match(/\/embed\/([^/?]+)/)?.[1];
-      if (!id) return;
       url.searchParams.set('autoplay', '1');
       url.searchParams.set('mute', '1');
       url.searchParams.set('loop', '1');
       url.searchParams.set('playlist', id);
       url.searchParams.set('playsinline', '1');
       url.searchParams.set('rel', '0');
-      frame.dataset.jdEnhanced = '1';
       frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      frame.dataset.jdPrepared = '1';
       frame.src = url.toString();
     } catch {}
   }
 
-  function enhanceFeaturedPhoto(button) {
-    const id = String(button.dataset.photo || '');
-    const image = button.querySelector('img');
-    if (!image || !id) return;
-    const item = mediaById.get(id);
-    const focus = readFocus(item?.caption || '');
-    image.style.objectPosition = `${focus.x}% ${focus.y}%`;
-  }
+  function enhanceVideos() {
+    document.querySelectorAll('.media-card').forEach(card => {
+      const item = itemForCard(card);
+      const video = card.querySelector('video.media-video');
+      const frame = card.querySelector('.video-frame iframe');
 
-  function stripVisibleFocusTokens(root) {
-    root.querySelectorAll?.('.media-copy p').forEach(p => {
-      const cleaned = cleanCaption(p.textContent || '');
-      if (p.textContent !== cleaned) p.textContent = cleaned;
+      if (video) setupDirectVideo(video, item);
+      if (frame) setupYouTube(frame, item);
+
+      // Keep the framing marker invisible if it was stored in the caption.
+      const caption = card.querySelector('.media-copy p');
+      if (caption) caption.innerHTML = stripFocusMarker(caption.innerHTML);
     });
   }
 
-  function enhanceLightbox(root) {
-    const image = root.querySelector?.('#lightbox-content > img');
+  function enhanceFeaturedPhotos() {
+    document.querySelectorAll('.clubhouse-photo[data-photo]').forEach(button => {
+      const item = mediaById.get(String(button.dataset.photo || ''));
+      const image = button.querySelector('img');
+      if (!image || !item) return;
+      const focus = parseFocus(item.caption || '');
+      image.style.objectPosition = `${focus.x}% ${focus.y}%`;
+    });
+  }
+
+  function fixLightbox() {
+    const image = document.querySelector('#lightbox-content > img');
     if (!image) return;
+    image.style.width = 'auto';
+    image.style.height = 'auto';
+    image.style.maxWidth = '100%';
+    image.style.maxHeight = '78vh';
+    image.style.objectFit = 'contain';
     image.style.objectPosition = 'center center';
   }
 
-  function enhancePage(root) {
-    root.querySelectorAll?.('video.media-video').forEach(prepDirectVideo);
-    root.querySelectorAll?.('.video-frame iframe').forEach(prepYouTube);
-    if (contentLoaded) root.querySelectorAll?.('.clubhouse-photo[data-photo]').forEach(enhanceFeaturedPhoto);
-    stripVisibleFocusTokens(root);
-    enhanceLightbox(root);
+  function enhanceNow() {
+    enhanceVideos();
+    enhanceFeaturedPhotos();
+    fixLightbox();
   }
 
-  const observer = new MutationObserver(records => {
-    for (const record of records) {
-      for (const node of record.addedNodes) {
-        if (node.nodeType !== 1) continue;
-        if (node.matches?.('video.media-video')) prepDirectVideo(node);
-        if (node.matches?.('.video-frame iframe')) prepYouTube(node);
-        enhancePage(node);
-      }
+  // The site's main module renders asynchronously. Use a short, bounded retry
+  // window rather than an endless DOM observer.
+  function scheduleEnhance() {
+    [0, 100, 250, 500, 900, 1500, 2500].forEach(delay => setTimeout(enhanceNow, delay));
+  }
+
+  document.addEventListener('click', event => {
+    if (event.target.closest('[data-photo]')) {
+      setTimeout(fixLightbox, 0);
+      setTimeout(fixLightbox, 80);
     }
+    if (event.target.closest('[data-page]')) scheduleEnhance();
   });
 
-  const start = () => {
-    observer.observe(document.body, { childList: true, subtree: true });
-    enhancePage(document);
-    loadContent();
-  };
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
-  else start();
+  document.addEventListener('change', event => {
+    if (event.target.matches('#season-select')) scheduleEnhance();
+  });
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) return;
@@ -126,4 +205,7 @@
       video.play().catch(() => {});
     });
   });
+
+  loadContent();
+  scheduleEnhance();
 })();
