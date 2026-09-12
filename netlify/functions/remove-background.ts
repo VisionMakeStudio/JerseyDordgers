@@ -61,10 +61,15 @@ export default async(req:Request)=>{
    return error(`PhotoRoom could not remove the background${detail?`: ${detail}`:'.'}`,502);
   }
 
+  const upstreamType=String(result.headers.get('content-type')||'').toLowerCase();
+  if(upstreamType&&!upstreamType.startsWith('image/')){
+   let detail='';try{detail=(await result.text()).slice(0,300)}catch{}
+   return error(`PhotoRoom returned an unexpected response${detail?`: ${detail}`:'.'}`,502);
+  }
   const output=await result.arrayBuffer();
   if(!output.byteLength)return error('PhotoRoom returned an empty image.',502);
   return new Response(output,{status:200,headers:{
-   'Content-Type':'image/png',
+   'Content-Type':upstreamType.startsWith('image/')?upstreamType:'image/png',
    'Content-Length':String(output.byteLength),
    'Cache-Control':'no-store, private',
    'X-JD-Background-Removal':'photoroom'
