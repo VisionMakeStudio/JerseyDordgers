@@ -64,3 +64,12 @@
  #ticker .ticker-label{font-size:10px!important}
  #ticker .score-card{flex-basis:calc(100vw - 118px)!important}
 }
+
+/* Stable rebuild — Around the Diamond uses the full row */
+.home-results-stack{max-width:none!important;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.home-results-stack>.empty{grid-column:1/-1;width:100%;min-height:120px;display:grid;align-content:center}
+.home-results-stack .home-game-mini{margin:0!important;border:1px solid #25384b;border-radius:7px;background:#0d1722;padding:12px!important}
+@media(max-width:760px){.home-results-stack{display:flex;overflow-x:auto;gap:8px;scroll-snap-type:x mandatory;scrollbar-width:none}.home-results-stack::-webkit-scrollbar{display:none}.home-results-stack .home-game-mini{flex:0 0 82%;scroll-snap-align:start}.home-results-stack>.empty{flex:1 0 100%}}
+.home-results-stack.home-results-1{grid-template-columns:1fr}
+.home-results-stack.home-results-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.home-results-stack.home-results-3{grid-template-columns:repeat(3,minmax(0,1fr))}

@@ -44,3 +44,15 @@
 
 /* Recovery stability overrides */
 .admin-subnav-empty{display:none!important}.jd-plugin-loading{padding:24px;border:1px solid #253a50;border-radius:8px;background:#0d1824;color:#8ea2b8}.phase1-admin .admin-nav nav{flex:none!important}.phase1-admin .admin-group-nav{min-height:0!important;height:auto!important}.phase1-admin .admin-group-button[hidden]{display:none!important}.phase1-admin #section-content{isolation:isolate}
+
+/* Stable Admin Rebuild — persistent shell and click safety */
+#admin-shell .admin-work{position:relative;z-index:1}
+#admin-shell #section-content{position:relative;z-index:2;isolation:isolate}
+#admin-shell #admin-menu-backdrop{pointer-events:none!important}
+body.admin-menu-open #admin-shell #admin-menu-backdrop{pointer-events:auto!important}
+@media(min-width:701px){#admin-shell #admin-menu-backdrop{display:none!important;pointer-events:none!important}}
+.jd-dashboard-season-line{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.jd-dashboard-season-line h2{margin:5px 0 4px}
+.jd-dashboard-season-line label{display:flex;align-items:center;gap:8px;color:#7f95ad;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+.jd-dashboard-season-line select{min-width:150px;min-height:34px;padding:6px 30px 6px 9px;border:1px solid #35516d;border-radius:5px;background:#0a1623;color:#eef6ff;font-size:11px;font-weight:800;text-transform:none;letter-spacing:0}
+@media(max-width:700px){.jd-dashboard-season-line{display:grid;width:100%;gap:8px}.jd-dashboard-season-line label{justify-content:space-between}.jd-dashboard-season-line select{flex:1;min-width:0}}

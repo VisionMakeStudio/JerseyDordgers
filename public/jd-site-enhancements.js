@@ -1106,9 +1106,17 @@
     fixLightbox();
   }
 
+  let enhanceQueued = false;
   function scheduleEnhance() {
-    [0, 80, 180, 350, 650, 1100, 1800, 2800].forEach(delay => setTimeout(enhanceNow, delay));
+    if (enhanceQueued) return;
+    enhanceQueued = true;
+    requestAnimationFrame(() => {
+      enhanceQueued = false;
+      enhanceNow();
+    });
   }
+
+  document.addEventListener('jd-site-render', scheduleEnhance);
 
   document.addEventListener('click', event => {
     if (event.target.closest('[data-photo]')) {
