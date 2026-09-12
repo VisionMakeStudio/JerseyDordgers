@@ -66,7 +66,7 @@ export default async(req:Request)=>{
    let target=users.find((u:any)=>(u.email||'').toLowerCase()===email);
 
    if(!target){
-    const tempPassword=`JD-${crypto.randomUUID()}-${crypto.randomUUID()}`;
+    const tempPassword=`JD-${crypto.randomUUID()}!Aa9`;
     target=await admin.createUser({
      email,
      password:tempPassword,

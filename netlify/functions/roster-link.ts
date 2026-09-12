@@ -1,6 +1,6 @@
 import {getUser,verifyRequestOrigin} from '@netlify/identity';
 
-const rolesFor=(user:any)=>Array.isArray(user?.roles)?user.roles:Array.isArray(user?.appMetadata?.roles)?user.appMetadata.roles:[];
+const rolesFor=(user:any)=>[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.appMetadata?.roles)?user.appMetadata.roles:[]),...(user?.role?[user.role]:[])];
 const canManage=(user:any)=>{
  const roles=rolesFor(user);
  const ownerEmail=(Netlify.env.get('DODGERS_ADMIN_EMAIL')||'').toLowerCase();
@@ -52,6 +52,8 @@ const seasonInfo=(text:string)=>{
  term=term[0].toUpperCase()+term.slice(1).toLowerCase();
  return {name:`${term} ${year}`,id:`${term.toLowerCase()}-${year}`,year,term};
 };
+
+const phaseInfo=(text:string)=>/playoff|postseason|post-season/i.test(String(text||''))?'playoffs':'regular';
 
 const normalizePosition=(value:string)=>String(value||'').replace(/\|/g,'/').replace(/\s+/g,'').replace(/^[-–—]+$/,'').slice(0,40);
 
@@ -143,7 +145,7 @@ export default async(req:Request)=>{
    const players=parsePlainRoster(pasted);
    if(!players.length)return respond({error:'No roster rows were found in the pasted text.'},400);
    const season=seasonInfo(pasted);
-   return respond({source:url||'Pasted roster',team:'Jersey Dodgers',season,players,sourceType:'pasted'});
+   return respond({source:url||'Pasted roster',team:'Jersey Dodgers',season,phase:phaseInfo(pasted),players,sourceType:'pasted'});
   }
 
   if(!url)return respond({error:'Paste the old roster URL.'},400);
@@ -174,8 +176,11 @@ export default async(req:Request)=>{
    if(response.ok){
     const html=await response.text();
     const title=textOf(html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1]||'');
+    const ogTitle=decode(html.match(/<meta\b[^>]*(?:property|name)=["']og:title["'][^>]*content=["']([^"']+)["']/i)?.[1]||'');
+    const headingTags=[...html.matchAll(/<h[1-3]\b[^>]*>([\s\S]*?)<\/h[1-3]>/gi)].slice(0,12).map(m=>textOf(m[1])).join(' · ');
     const heading=textOf(html.slice(0,Math.min(html.length,120000)));
-    const season=seasonInfo(`${title} ${heading}`);
+    // Prefer the page title/current heading over navigation/history links. This prevents a Fall page from being misread as Spring because another season is linked elsewhere on the page.
+    const season=seasonInfo(title)||seasonInfo(ogTitle)||seasonInfo(headingTags)||seasonInfo(heading);
     let players=dedupe(parseTableRoster(html));
     if(!players.length)players=dedupe(parseCardRoster(html));
 
@@ -185,6 +190,7 @@ export default async(req:Request)=>{
       team:/Jersey Dodgers/i.test(`${title} ${heading}`)?'Jersey Dodgers':'',
       season,
       players,
+      phase:phaseInfo(`${url} ${title} ${ogTitle} ${headingTags}`),
       sourceType:'live'
      });
     }
@@ -198,6 +204,7 @@ export default async(req:Request)=>{
     team:'Jersey Dodgers',
     season:{name:'Spring 2024',id:'spring-2024',year:'2024',term:'Spring'},
     players:knownSpring2024,
+    phase:'regular',
     sourceType:'verified-fallback'
    });
   }

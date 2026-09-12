@@ -17,6 +17,8 @@
   let mediaById = new Map();
   let rosterPlayers = [];
   let siteData = null;
+  let statsPhase = sessionStorage.getItem('jd-stats-phase') || 'regular';
+  let rosterPhase = sessionStorage.getItem('jd-roster-phase-public') === 'playoffs' ? 'playoffs' : 'regular';
 
   const clamp = (n, min, max) => Math.max(min, Math.min(max, Number(n) || min));
 
@@ -519,42 +521,57 @@
 
 
   function selectedSeasonId() {
+    const requested = new URLSearchParams(location.search).get('season');
+    if (requested && (siteData?.seasons || []).some(s => String(s.id) === String(requested))) return requested;
     return document.querySelector('#season-select')?.value || siteData?.settings?.currentSeason || '';
   }
 
-  function seasonRosterPlayers() {
+  function selectedRosterPhase() {
+    const requested = new URLSearchParams(location.search).get('phase');
+    if (requested === 'playoffs' || requested === 'regular') return requested;
+    return rosterPhase === 'playoffs' ? 'playoffs' : 'regular';
+  }
+
+  function seasonRosterPlayers(phase = selectedRosterPhase()) {
     if (!siteData) return [];
 
     const sid = selectedSeasonId();
     const playerMap = new Map((siteData.players || []).map(p => [String(p.id), p]));
-    const allRosterRows = (siteData.rosters || []).filter(r => r.season === sid);
+    const sourceRows = phase === 'playoffs' ? (siteData.playoffRosters || []) : (siteData.rosters || []);
+    const sourceStats = phase === 'playoffs' ? (siteData.playoffStats || []) : (siteData.stats || []);
+    const allRosterRows = sourceRows.filter(r => r.season === sid);
     const explicit = allRosterRows.filter(r => r.active !== false);
-    const represented = new Set(allRosterRows.map(r => String(r.player)));
     const roster = [];
 
     explicit.forEach(entry => {
-      const p = playerMap.get(String(entry.player));
-      if (!p) return;
+      const playerItem = playerMap.get(String(entry.player));
+      if (!playerItem) return;
       roster.push({
-        ...p,
-        number: entry.number || p.number || '',
-        position: entry.position || p.position || '',
-        _seasonRoster: entry
+        ...playerItem,
+        number: entry.number || playerItem.number || '',
+        position: entry.position || playerItem.position || '',
+        _seasonRoster: entry,
+        _rosterPhase: phase
       });
     });
 
-    // Seasons imported before the V9 roster table can still display from stats.
-    // Once an explicit roster record exists (even inactive), it wins.
-    (siteData.stats || [])
-      .filter(s => s.season === sid && !represented.has(String(s.player)))
-      .forEach(stat => {
-        const p = playerMap.get(String(stat.player));
-        if (p) roster.push({...p});
+    // Legacy seasons that predate explicit rosters can still display from stats.
+    // As soon as any explicit roster rows exist for a season/set, they become
+    // authoritative — including inactive rows. This is what keeps a player you
+    // removed in Admin from reappearing publicly just because old stats remain.
+    if (!allRosterRows.length) {
+      const seen = new Set();
+      sourceStats.filter(st => st.season === sid).forEach(stat => {
+        if (seen.has(String(stat.player))) return;
+        seen.add(String(stat.player));
+        const playerItem = playerMap.get(String(stat.player));
+        if (playerItem) roster.push({...playerItem, _rosterPhase: phase});
       });
+    }
 
     const numberValue = value => {
-      const m = String(value || '').match(/\d+/);
-      return m ? Number(m[0]) : 9999;
+      const match = String(value || '').match(/\d+/);
+      return match ? Number(match[0]) : 9999;
     };
 
     const sorted = roster.sort((a, b) =>
@@ -562,7 +579,7 @@
       String(a.name || '').localeCompare(String(b.name || ''))
     );
 
-    window.__jdSeasonRosterMap = new Map(sorted.map(p => [String(p.id), p]));
+    window.__jdSeasonRosterMap = new Map(sorted.map(playerItem => [String(playerItem.id), playerItem]));
     return sorted;
   }
 
@@ -577,9 +594,33 @@
       .find(node => /meet the dodgers/i.test(node.textContent || ''));
     if (!headingNode) return;
 
-    const roster = seasonRosterPlayers();
-    const signature = `${selectedSeasonId()}|${roster.map(p => p.id).join(',')}`;
+    const sid = selectedSeasonId();
+    const hasPlayoffs = (siteData.playoffRosters || []).some(r => r.season === sid) ||
+      (siteData.playoffStats || []).some(st => st.season === sid);
 
+    let phaseTabs = wrap.querySelector('.jd-v11-roster-phase-tabs');
+    if (hasPlayoffs) {
+      if (!phaseTabs) {
+        phaseTabs = document.createElement('div');
+        phaseTabs.className = 'jd-v11-phase-tabs jd-v11-roster-phase-tabs';
+        phaseTabs.innerHTML = '<button type="button" data-jd-roster-phase="regular">Regular season</button><button type="button" data-jd-roster-phase="playoffs">Playoffs</button>';
+        headingNode.insertAdjacentElement('afterend', phaseTabs);
+      }
+    } else {
+      phaseTabs?.remove();
+      phaseTabs = null;
+      rosterPhase = 'regular';
+      sessionStorage.setItem('jd-roster-phase-public', 'regular');
+    }
+
+    const phase = hasPlayoffs ? selectedRosterPhase() : 'regular';
+    rosterPhase = phase;
+    phaseTabs?.querySelectorAll('[data-jd-roster-phase]').forEach(button =>
+      button.setAttribute('aria-pressed', String(button.dataset.jdRosterPhase === phase))
+    );
+
+    const roster = seasonRosterPlayers(phase);
+    const signature = `${sid}|${phase}|${roster.map(p => p.id).join(',')}`;
     let grid = wrap.querySelector('.roster-grid');
     if (grid?.dataset.jdRosterSignature === signature) return;
 
@@ -595,12 +636,12 @@
       ) remove.remove();
     }
 
+    const anchor = phaseTabs || headingNode;
     if (!roster.length) {
       const emptyState = document.createElement('div');
       emptyState.className = 'empty';
-      emptyState.innerHTML =
-        '<h3>Roster not published</h3><p>The team will announce this season’s roster here.</p>';
-      headingNode.insertAdjacentElement('afterend', emptyState);
+      emptyState.innerHTML = `<h3>${phase === 'playoffs' ? 'Playoff roster not published' : 'Roster not published'}</h3><p>${phase === 'playoffs' ? 'Playoff players will appear here when the team publishes them.' : 'The team will announce this season’s roster here.'}</p>`;
+      anchor.insertAdjacentElement('afterend', emptyState);
       return;
     }
 
@@ -611,7 +652,7 @@
     roster.forEach(playerItem => {
       const card = document.createElement('a');
       card.className = 'player-card';
-      card.href = `/roster/${encodeURIComponent(playerItem.id)}/?season=${encodeURIComponent(selectedSeasonId())}`;
+      card.href = `/roster/${encodeURIComponent(playerItem.id)}/?season=${encodeURIComponent(sid)}&phase=${encodeURIComponent(phase)}`;
 
       if (playerItem.photo) {
         const image = document.createElement('img');
@@ -630,13 +671,13 @@
       copy.innerHTML = `
         <small>#${escapeHtml(playerItem.number || '')} ${escapeHtml(playerItem.position || '')}</small>
         <h3>${escapeHtml(playerItem.name || '')}</h3>
-        <span>Player profile</span>
+        <span>${phase === 'playoffs' ? 'Playoff profile' : 'Player profile'}</span>
       `;
       card.append(copy);
       grid.append(card);
     });
 
-    headingNode.insertAdjacentElement('afterend', grid);
+    anchor.insertAdjacentElement('afterend', grid);
   }
 
   function statNumber(value) {
@@ -745,63 +786,90 @@
     if (!profile || document.querySelector('.jd-career-summary')) return;
 
     const playerItem = (siteData.players || []).find(p => String(p.id) === String(id));
-    const playerStats = (siteData.stats || []).filter(s => String(s.player) === String(id));
-    if (!playerItem || !playerStats.length) return;
+    const regularStats = (siteData.stats || []).filter(s => String(s.player) === String(id));
+    const playoffStats = (siteData.playoffStats || []).filter(s => String(s.player) === String(id));
+    if (!playerItem || (!regularStats.length && !playoffStats.length)) return;
 
     const seasonById = new Map((siteData.seasons || []).map(s => [s.id, s]));
-    const years = [...new Set(
-      playerStats
-        .map(s => seasonById.get(s.season)?.name?.match(/\b(20\d{2})\b/)?.[1])
-        .filter(Boolean)
-    )].sort((a, b) => Number(b) - Number(a));
+    const yearsFor = list => [...new Set(list.map(s => seasonById.get(s.season)?.name?.match(/\b(20\d{2})\b/)?.[1]).filter(Boolean))].sort((a,b)=>Number(b)-Number(a));
+    const regularYears = yearsFor(regularStats), playoffYears = yearsFor(playoffStats);
 
     const section = document.createElement('section');
     section.className = 'jd-career-summary';
     section.innerHTML = `
       <div class="section-head jd-career-head">
-        <div>
-          <span class="eyebrow">PLAYER HISTORY</span>
-          <h2>Career stats</h2>
-        </div>
-        <label class="jd-career-view">
-          View
-          <select>
-            <option value="career">Career</option>
-            ${years.map(year => `<option value="${year}">${year} total</option>`).join('')}
-          </select>
-        </label>
-      </div>
-      <div class="jd-career-content"></div>
-    `;
+        <div><span class="eyebrow">PLAYER HISTORY</span><h2>Career stats</h2></div>
+        <label class="jd-career-view">View<select>
+          ${regularStats.length?'<option value="regular-career">Regular season · Career</option>':''}
+          ${regularYears.map(year=>`<option value="regular-${year}">Regular season · ${year}</option>`).join('')}
+          ${playoffStats.length?'<option value="playoffs-career">Playoffs · Career</option>':''}
+          ${playoffYears.map(year=>`<option value="playoffs-${year}">Playoffs · ${year}</option>`).join('')}
+        </select></label>
+      </div><div class="jd-career-content"></div>`;
 
     profile.insertAdjacentElement('afterend', section);
-
-    const select = section.querySelector('select');
-    const content = section.querySelector('.jd-career-content');
-
-    const paint = () => {
-      const value = select.value;
-      const chosen = value === 'career'
-        ? playerStats
-        : playerStats.filter(s => seasonById.get(s.season)?.name?.includes(value));
-
-      const total = aggregateStats(chosen);
-      const hasPitch = chosen.some(s => ipToOuts(s?.pitch?.IP) > 0);
-      const hasField = chosen.some(s => Object.values(s?.fielding || {}).some(v => statNumber(v) > 0));
-
-      content.innerHTML = `
-        <div class="jd-career-label">
-          <strong>${value === 'career' ? 'CAREER TOTAL' : `${escapeHtml(value)} TOTAL`}</strong>
-          <span>${chosen.length} season${chosen.length === 1 ? '' : 's'}</span>
-        </div>
-        ${careerTable(playerItem, total, 'bat')}
-        ${hasPitch ? careerTable(playerItem, total, 'pitch') : ''}
-        ${hasField ? careerTable(playerItem, total, 'fielding') : ''}
-      `;
+    const select=section.querySelector('select'),content=section.querySelector('.jd-career-content');
+    const paint=()=>{
+      const [phase,year]=String(select.value).split('-'),base=phase==='playoffs'?playoffStats:regularStats;
+      const chosen=year==='career'?base:base.filter(s=>seasonById.get(s.season)?.name?.includes(year));
+      const total=aggregateStats(chosen),hasPitch=chosen.some(s=>ipToOuts(s?.pitch?.IP)>0),hasField=chosen.some(s=>Object.values(s?.fielding||{}).some(v=>statNumber(v)>0));
+      content.innerHTML=`<div class="jd-career-label"><strong>${phase==='playoffs'?'PLAYOFFS':'REGULAR SEASON'} · ${year==='career'?'CAREER TOTAL':escapeHtml(year)+' TOTAL'}</strong><span>${chosen.length} season${chosen.length===1?'':'s'}</span></div>${careerTable(playerItem,total,'bat')}${hasPitch?careerTable(playerItem,total,'pitch'):''}${hasField?careerTable(playerItem,total,'fielding'):''}`;
     };
+    select.addEventListener('change',paint);paint();
+  }
 
-    select.addEventListener('change', paint);
-    paint();
+  function seasonRosterNumber(playerId, phase='regular'){
+    const sid=selectedSeasonId(),rows=phase==='playoffs'?(siteData?.playoffRosters||[]):(siteData?.rosters||[]),row=rows.find(r=>r.season===sid&&String(r.player)===String(playerId)&&r.active!==false),p=(siteData?.players||[]).find(p=>String(p.id)===String(playerId));
+    return row?.number||p?.number||'—';
+  }
+  function visibleStatsForPhase(phase='regular'){
+    const sid=selectedSeasonId(),rosterRows=(phase==='playoffs'?(siteData?.playoffRosters||[]):(siteData?.rosters||[])).filter(r=>r.season===sid),statsRows=(phase==='playoffs'?(siteData?.playoffStats||[]):(siteData?.stats||[])).filter(st=>st.season===sid);
+    if(!rosterRows.length)return statsRows;
+    const activeIds=new Set(rosterRows.filter(r=>r.active!==false).map(r=>String(r.player)));
+    return statsRows.filter(st=>activeIds.has(String(st.player)));
+  }
+  function statsGames(items,phase){
+    const gp=Math.max(0,...items.map(s=>statNumber(s?.bat?.GP||s?.pitch?.GP||0)));
+    if(phase==='playoffs')return gp;
+    const finals=(siteData?.games||[]).filter(g=>g.season===selectedSeasonId()&&g.status==='final').length;
+    return Math.max(finals,gp);
+  }
+  function qualification(items,phase){
+    const games=statsGames(items,phase);
+    return {games,minPA:Math.max(phase==='playoffs'?4:8,Math.ceil(games*2)),minIP:Math.max(3,Math.ceil(games*.75))};
+  }
+  function leaderPhotoMarkup(playerItem,phase='regular'){
+    if(playerItem?.photo)return `<span class="jd-leader-visual"><img src="${escapeHtml(playerItem.photo)}" alt="${escapeHtml(playerItem.name||'Player')}" loading="lazy"></span>`;
+    return `<span class="jd-leader-visual"><span class="jd-leader-number">#${escapeHtml(seasonRosterNumber(playerItem?.id,phase))}</span></span>`;
+  }
+  function leaderGridMarkup(items,group='bat',phase='regular'){
+    const configs=group==='pitch'?[['ERA','EARNED RUN AVG',true,'rate'],['SO','STRIKEOUTS',false,'count'],['W','WINS',false,'count'],['WHIP','WHIP',true,'rate']]:[['AVG','BATTING AVERAGE',false,'rate'],['HR','HOME RUNS',false,'count'],['RBI','RUNS BATTED IN',false,'count'],['SB','STOLEN BASES',false,'count']],q=qualification(items,phase);
+    if(!items.length)return '<div class="empty"><h3>Season leaders coming soon</h3><p>No statistics have been published for this stats set yet.</p></div>';
+    const cards=configs.map(([key,label,low,type])=>{
+      let list=items.filter(s=>s?.[group]?.[key]!==undefined&&s[group][key]!==''&&s[group][key]!=='-');
+      if(group==='pitch')list=list.filter(s=>ipToOuts(s?.pitch?.IP)>0);
+      if(type==='rate'&&group==='bat')list=list.filter(s=>statNumber(s?.bat?.PA||s?.bat?.AB)>=q.minPA);
+      if(type==='rate'&&group==='pitch')list=list.filter(s=>ipToOuts(s?.pitch?.IP)/3>=q.minIP);
+      if(!list.length){const rule=group==='bat'?`${q.minPA} PA minimum`:`${q.minIP} IP minimum`;return `<article class="jd-v11-leader-card is-empty"><div class="jd-leader-copy"><span>${label}</span><b>No qualified leader yet</b><small>${type==='rate'?rule:'No data yet'}</small></div></article>`}
+      const values=list.map(s=>Number(s[group][key])).filter(Number.isFinite);if(!values.length)return'';const best=(low?Math.min:Math.max)(...values),wins=list.filter(s=>Number(s[group][key])===best),first=wins[0],p=(siteData.players||[]).find(x=>String(x.id)===String(first.player));
+      return `<article class="jd-v11-leader-card">${leaderPhotoMarkup(p,phase)}<div class="jd-leader-copy"><span>${label}${wins.length>1?' · TIED':''}</span><b>${escapeHtml(first[group][key])}</b><a href="/roster/${encodeURIComponent(first.player)}/?season=${encodeURIComponent(selectedSeasonId())}&phase=${encodeURIComponent(phase)}">${escapeHtml(p?.name||'Player')}</a><small>${group==='pitch'?escapeHtml(first.pitch.IP||'0')+' IP':escapeHtml(first.bat.PA||first.bat.AB||'0')+' PA'}${wins.length>1?` · +${wins.length-1} tied`:''}</small></div></article>`;
+    }).join('');
+    return `<div class="jd-v11-leader-grid">${cards}</div><p class="jd-v11-leader-note">Rate-stat qualification: ${group==='bat'?`${q.minPA} plate appearances`:`${q.minIP} innings`} for this ${phase==='playoffs'?'playoff':'regular-season'} sample. Counting-stat leaders do not require a minimum.</p>`;
+  }
+  function statsTableMarkup(items,group,phase='regular'){
+    const keys=group==='bat'?['GP','PA','AB','H','AVG','OBP','OPS','HR','RBI','R','SB']:group==='pitch'?['IP','W','L','SV','H','ER','BB','SO','ERA','WHIP']:['TC','PO','A','E','FPCT','DP'];
+    return `<div class="table-scroll"><table><thead><tr><th>PLAYER</th>${keys.map(k=>`<th>${k}</th>`).join('')}</tr></thead><tbody>${items.map(st=>{const p=(siteData.players||[]).find(x=>String(x.id)===String(st.player));return`<tr><th><a href="/roster/${encodeURIComponent(st.player)}/?season=${encodeURIComponent(selectedSeasonId())}&phase=${encodeURIComponent(phase)}">${escapeHtml(p?.name||'Player')}</a></th>${keys.map(k=>`<td>${escapeHtml(st?.[group]?.[k]??'—')}</td>`).join('')}</tr>`}).join('')}</tbody></table></div>`;
+  }
+  function currentStatsGroup(){return document.querySelector('[data-stats][aria-pressed="true"]')?.dataset?.stats||'bat'}
+  function enhanceStatsCenter(){
+    const route=location.pathname.split('/').filter(Boolean)[0]||'';if(route!=='stats'||!siteData)return;const wrap=document.querySelector('#main .wrap'),tabs=wrap?.querySelector('.tabs');if(!wrap||!tabs)return;
+    let phaseTabs=wrap.querySelector('.jd-v11-phase-tabs');if(!phaseTabs){phaseTabs=document.createElement('div');phaseTabs.className='jd-v11-phase-tabs';phaseTabs.innerHTML='<button type="button" data-jd-phase="regular">Regular season</button><button type="button" data-jd-phase="playoffs">Playoffs</button>';tabs.insertAdjacentElement('beforebegin',phaseTabs)}
+    phaseTabs.querySelectorAll('[data-jd-phase]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.jdPhase===statsPhase)));
+    wrap.querySelectorAll(':scope > .leader-grid,:scope > .note,:scope > .table-scroll,:scope > .empty,:scope > .jd-v11-stats-content').forEach(n=>n.remove());
+    const group=currentStatsGroup(),items=visibleStatsForPhase(statsPhase),content=document.createElement('div');content.className='jd-v11-stats-content';content.innerHTML=`<div class="jd-v11-phase-label"><strong>${statsPhase==='playoffs'?'PLAYOFFS':'REGULAR SEASON'}</strong><span>${items.length} player stat line${items.length===1?'':'s'}</span></div>${items.length?(group!=='fielding'?leaderGridMarkup(items,group,statsPhase):'')+statsTableMarkup(items,group,statsPhase):'<div class="empty"><h3>Stats coming soon</h3><p>No '+(statsPhase==='playoffs'?'playoff':'regular-season')+' totals are saved for this season yet.</p></div>'}`;tabs.insertAdjacentElement('afterend',content);
+  }
+  function enhanceHomeLeaders(){
+    const route=location.pathname.split('/').filter(Boolean)[0]||'';if(route||!siteData)return;const head=[...document.querySelectorAll('#main .section-head')].find(h=>/team leaders/i.test(h.querySelector('h2')?.textContent||''));const section=head?.parentElement;if(!section)return;section.querySelectorAll(':scope > .leader-grid,:scope > .note,:scope > .jd-v11-leader-grid,:scope > .jd-v11-leader-note,:scope > .empty').forEach(n=>n.remove());const items=visibleStatsForPhase('regular');section.insertAdjacentHTML('beforeend',leaderGridMarkup(items,'bat','regular'));
   }
 
   function redesignRosterCards() {
@@ -995,10 +1063,13 @@
     if (route !== 'roster' || !id || !siteData) return;
 
     const sid = selectedSeasonId();
+    const requestedPhase = new URLSearchParams(location.search).get('phase');
+    const phase = requestedPhase === 'playoffs' ? 'playoffs' : 'regular';
     const player = (siteData.players || []).find(p => String(p.id) === String(id));
     if (!player) return;
 
-    const roster = (siteData.rosters || []).find(r =>
+    const rows = phase === 'playoffs' ? (siteData.playoffRosters || []) : (siteData.rosters || []);
+    const roster = rows.find(r =>
       r.season === sid &&
       String(r.player) === String(id) &&
       r.active !== false
@@ -1012,7 +1083,7 @@
     const paragraph = copy?.querySelector('p');
     const seasonName = siteData.seasons?.find(s => s.id === sid)?.name || '';
 
-    if (eyebrow) eyebrow.textContent = `JERSEY DODGERS · #${roster.number || player.number || ''} · ${seasonName}`;
+    if (eyebrow) eyebrow.textContent = `JERSEY DODGERS · #${roster.number || player.number || ''} · ${seasonName}${phase === 'playoffs' ? ' · PLAYOFFS' : ''}`;
     if (paragraph) {
       const extras = `${player.bats ? ' · Bats ' + player.bats : ''}${player.throws ? ' · Throws ' + player.throws : ''}`;
       paragraph.textContent = `${roster.position || player.position || ''}${extras}`;
@@ -1032,6 +1103,8 @@
     redesignRosterCards();
     applySeasonProfileIdentity();
     enhanceCareerStats();
+    enhanceStatsCenter();
+    enhanceHomeLeaders();
     fixLightbox();
   }
 
@@ -1046,6 +1119,23 @@
     }
 
     if (event.target.closest('[data-page]')) scheduleEnhance();
+    if (event.target.closest('[data-stats]')) scheduleEnhance();
+    const phaseButton = event.target.closest('[data-jd-phase]');
+    if (phaseButton) {
+      statsPhase = phaseButton.dataset.jdPhase === 'playoffs' ? 'playoffs' : 'regular';
+      sessionStorage.setItem('jd-stats-phase', statsPhase);
+      enhanceStatsCenter();
+    }
+    const rosterPhaseButton = event.target.closest('[data-jd-roster-phase]');
+    if (rosterPhaseButton) {
+      rosterPhase = rosterPhaseButton.dataset.jdRosterPhase === 'playoffs' ? 'playoffs' : 'regular';
+      sessionStorage.setItem('jd-roster-phase-public', rosterPhase);
+      const url = new URL(location.href);
+      url.searchParams.set('phase', rosterPhase);
+      history.replaceState({}, '', url.pathname + '?' + url.searchParams.toString());
+      rebuildSeasonRoster();
+      redesignRosterCards();
+    }
   });
 
   document.addEventListener('change', event => {
