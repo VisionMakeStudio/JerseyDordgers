@@ -1,0 +1,35 @@
+/* Jersey Dodgers V12.6 — desktop sticky preview + generator polish patch */
+@media (min-width:901px){
+  /* Sticky fails when a parent becomes a scrolling/overflow container. Keep the
+     generator's desktop ancestors visible so the preview follows the viewport. */
+  .admin-work:has(.jd-graphic-shell),
+  #section-content:has(.jd-graphic-shell),
+  .jd-graphic-shell,
+  .jd-graphic-layout{
+    overflow:visible!important;
+  }
+  .jd-graphic-layout{align-items:start!important}
+  .jd-graphic-stage-wrap{
+    position:sticky!important;
+    top:16px!important;
+    align-self:start!important;
+    height:max-content!important;
+    max-height:none!important;
+    overflow:visible!important;
+    z-index:5;
+  }
+  .jd-graphic-canvas-shell{
+    width:min(100%,520px,calc((100vh - 280px)*.8))!important;
+    min-width:300px;
+  }
+  .jd-preview-placement{width:min(100%,520px)!important}
+}
+
+/* Slightly compact the signature editor so the left column is easier to scan. */
+.jd-signature-adjust{padding:9px!important;gap:8px!important}
+.jd-signature-slider-grid{gap:5px!important}
+.jd-signature-adjust .jd-placement-row{min-height:30px}
+
+@media (max-width:900px){
+  .jd-graphic-stage-wrap{position:static!important;max-height:none!important;overflow:visible!important}
+}
