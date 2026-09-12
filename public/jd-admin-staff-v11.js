@@ -196,77 +196,56 @@
   }
 
   function openStaff(){
-    if(document.body.dataset.adminGroup!=='settings'){
-      const settings=$('[data-admin-group="settings"]');
-      if(settings){settings.click();setTimeout(openStaff,30);return;}
-    }
     document.body.classList.remove('admin-menu-open');
     $('#admin-nav')?.classList.remove('open');
     $('#admin-menu-toggle')?.setAttribute('aria-expanded','false');
-    $$('#admin-nav [data-section],#admin-subnav button').forEach(b=>b.classList.remove('active'));
-    $('[data-admin-group="settings"]')?.classList.add('active');
     document.body.dataset.adminGroup='settings';
     document.body.dataset.adminSection='staff-access';
-    const button=$('#jd-staff-tab');
-    button?.classList.add('active');
+    $$('[data-admin-group]').forEach(button=>button.classList.toggle('active',button.dataset.adminGroup==='settings'));
+    $$('#admin-subnav [data-section]').forEach(button=>button.classList.toggle('active',button.dataset.section==='staff-access'));
     renderStaff();
   }
 
   function applyMediaNavigation(access){
     const nav=$('#admin-nav');
     if(!nav||!access||access.coach)return;
-
     const allowed=new Set(['media','channels']);
-    $$('[data-section]',nav).forEach(button=>{button.hidden=!allowed.has(button.dataset.section);});
     $$('[data-admin-group]',nav).forEach(button=>{button.hidden=button.dataset.adminGroup!=='content';});
     $$('#admin-subnav [data-section]').forEach(button=>{button.hidden=!allowed.has(button.dataset.section);});
-
     if(!allowed.has(document.body.dataset.adminSection||'')){
-      const media=$('[data-section="media"]',nav);
-      if(media)setTimeout(()=>media.click(),0);
+      const go=window.JDAdminNavigate;
+      if(typeof go==='function')setTimeout(()=>go('media'),0);
     }
   }
 
   async function install(){
     const nav=$('#admin-nav');
     if(!nav)return;
-
     const now=Date.now();
     if(checking)return;
-    if(now-lastCheck<300){setTimeout(install,320-(now-lastCheck));return;}
+    if(now-lastCheck<500){setTimeout(install,520-(now-lastCheck));return;}
     checking=true;lastCheck=now;
-
     try{
       const access=await accessInfo();
       applyMediaNavigation(access);
-
+      const staffTab=$('#admin-subnav [data-section="staff-access"]');
       if(access.owner){
         isOwner=true;
+        if(staffTab)staffTab.hidden=false;
         window.JDStaffAccess={open:openStaff};
         if(!staffLoaded)await loadStaff();
-        const subnav=$('#admin-subnav');
-        if(document.body.dataset.adminGroup==='settings'&&subnav&&!$('#jd-staff-tab')){
-          const button=document.createElement('button');
-          button.id='jd-staff-tab';
-          button.type='button';
-          button.className='admin-subnav-tab admin-utility-tab';
-          button.textContent='Staff Access';
-          button.addEventListener('click',openStaff);
-          subnav.append(button);
-        }
+        if(document.body.dataset.adminSection==='staff-access')openStaff();
       }else{
         isOwner=false;
+        if(staffTab)staffTab.hidden=true;
         delete window.JDStaffAccess;
-        $('#jd-staff-tab')?.remove();
       }
     }catch(error){
-      if(error.status===403)isOwner=false;
+      if(error.status===403){isOwner=false;const staffTab=$('#admin-subnav [data-section="staff-access"]');if(staffTab)staffTab.hidden=true;}
     }finally{checking=false}
   }
 
-  // Core Admin redraws the sidebar as sections change.
-  const observer=new MutationObserver(()=>install());
-  observer.observe(document.documentElement,{childList:true,subtree:true});
-  [500,1000,1800,3000].forEach(delay=>setTimeout(install,delay));
+  document.addEventListener('jd-admin-render',()=>install());
+  [350,900,1800].forEach(delay=>setTimeout(install,delay));
 
 })();

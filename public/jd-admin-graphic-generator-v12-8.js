@@ -688,32 +688,51 @@
     const name=posterFilename(),a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.append(a);a.click();a.remove();if(downloadWindow&&!downloadWindow.closed){try{downloadWindow.document.title=name;downloadWindow.document.body.style.cssText='margin:0;background:#07101a;color:white;font-family:system-ui;text-align:center;padding:24px';downloadWindow.document.body.innerHTML='<p>If the download did not start automatically, use the button below.</p><a id="jd-final-download" style="display:inline-block;padding:12px 18px;background:#168bff;color:white;text-decoration:none;border-radius:7px">Download PNG</a>';const link=downloadWindow.document.getElementById('jd-final-download');link.href=url;link.download=name;link.click()}catch{}}return true;
   }
 
-  function ensureGraphicTab(){
-    const subnav=$('#admin-subnav');
-    if(document.body.dataset.adminGroup!=='content'||!subnav)return null;
-    let button=$('#jd-graphic-tab');
-    if(!button){
-      button=document.createElement('button');button.id='jd-graphic-tab';button.type='button';button.className='admin-subnav-tab admin-utility-tab';button.textContent='Graphic Generator';button.addEventListener('click',openGenerator);subnav.append(button);
-    }
-    return button;
-  }
-
   async function openGenerator(){
-    if(document.body.dataset.adminGroup!=='content'){
-      const contentGroup=$('[data-admin-group="content"]');
-      if(contentGroup){contentGroup.click();setTimeout(openGenerator,35);return;}
-    }
-    active=true;document.body.classList.add('jd-graphic-active');document.body.classList.remove('admin-menu-open');$('#admin-nav')?.classList.remove('open');$('#admin-menu-toggle')?.setAttribute('aria-expanded','false');$$('#admin-nav [data-section],#admin-subnav button').forEach(b=>b.classList.remove('active'));$('[data-admin-group="content"]')?.classList.add('active');document.body.dataset.adminGroup='content';document.body.dataset.adminSection='graphic-generator';ensureGraphicTab()?.classList.add('active');
-    const saveState=$('#save-state'),saveButton=$('#save-all');if(saveState)saveState.hidden=true;if(saveButton)saveButton.hidden=true;const heading=$('.admin-heading h1');if(heading)heading.textContent='Graphic Generator';const eyebrow=$('.admin-heading .eyebrow');if(eyebrow)eyebrow.textContent='CONTENT';const help=$('.admin-help');if(help)help.textContent='Build a 1080×1350 Player of the Week graphic with three Jersey Dodgers poster styles and a live preview.';
-    try{const payload=await api('/api/admin/content');data=payload.data||payload;selectedSeasonId=selectedSeasonId&&data.seasons.some(s=>s.id===selectedSeasonId)?selectedSeasonId:currentSeason();const ps=rosterPlayers();selectedPlayerId=ps.some(p=>String(p.id)===String(selectedPlayerId))?selectedPlayerId:(ps[0]?.id||'');resetStyleStates();resetStats();resetText();await loadLogos();try{await document.fonts?.load?.(`72px ${SIGNATURE_FONT}`);await document.fonts?.ready}catch{}renderControls();await useProfilePhoto()}catch(e){setStatus(e.message,true)}
+    active=true;
+    document.body.classList.add('jd-graphic-active');
+    document.body.classList.remove('admin-menu-open');
+    $('#admin-nav')?.classList.remove('open');
+    $('#admin-menu-toggle')?.setAttribute('aria-expanded','false');
+    document.body.dataset.adminGroup='graphic';
+    document.body.dataset.adminSection='graphic-generator';
+    $$('[data-admin-group]').forEach(b=>b.classList.toggle('active',b.dataset.adminGroup==='graphic'));
+    const saveState=$('#save-state'),saveButton=$('#save-all');if(saveState)saveState.hidden=true;if(saveButton)saveButton.hidden=true;
+    const heading=$('.admin-heading h1');if(heading)heading.textContent='Graphic Generator';
+    const eyebrow=$('.admin-heading .eyebrow');if(eyebrow)eyebrow.textContent='SOCIAL GRAPHICS';
+    const help=$('.admin-help');if(help)help.textContent='Build a 1080×1350 Player of the Week graphic. Generator controls stay isolated from Admin navigation.';
+    try{
+      const payload=await api('/api/admin/content');data=payload.data||payload;
+      selectedSeasonId=selectedSeasonId&&data.seasons.some(s=>s.id===selectedSeasonId)?selectedSeasonId:currentSeason();
+      const ps=rosterPlayers();selectedPlayerId=ps.some(p=>String(p.id)===String(selectedPlayerId))?selectedPlayerId:(ps[0]?.id||'');
+      resetStyleStates();resetStats();resetText();await loadLogos();
+      try{await document.fonts?.load?.(`72px ${SIGNATURE_FONT}`);await document.fonts?.ready}catch{}
+      renderControls();await useProfilePhoto();
+    }catch(e){setStatus(e.message,true)}
   }
 
   window.JDGraphicGenerator={open:openGenerator};
 
   async function install(){
-    if(installing)return;installing=true;try{access=await api('/api/admin/access');if(!access.media){delete window.JDGraphicGenerator;$('#jd-graphic-tab')?.remove();return}window.JDGraphicGenerator={open:openGenerator};const button=ensureGraphicTab();if(active)button?.classList.add('active')}catch{}finally{installing=false}
+    if(installing)return;installing=true;
+    try{
+      access=await api('/api/admin/access');
+      const mainButton=$('[data-admin-group="graphic"]');
+      if(!access.media){delete window.JDGraphicGenerator;if(mainButton)mainButton.hidden=true;return}
+      if(mainButton)mainButton.hidden=false;
+      window.JDGraphicGenerator={open:openGenerator};
+      if(document.body.dataset.adminSection==='graphic-generator'&&!active)openGenerator();
+    }catch{}finally{installing=false}
   }
-  document.addEventListener('click',e=>{if(e.target.closest('[data-section],[data-admin-group],#jd-staff-tab')){active=false;document.body.classList.remove('jd-graphic-active');$('#jd-graphic-tab')?.classList.remove('active')}});
-  const observer=new MutationObserver(()=>{if(document.body.dataset.adminGroup==='content'&&!$('#jd-graphic-tab'))install()});observer.observe(document.documentElement,{childList:true,subtree:true});[250,600,1200,2200,4000].forEach(t=>setTimeout(install,t));
+
+  document.addEventListener('jd-admin-render',event=>{
+    const next=event.detail?.section||document.body.dataset.adminSection||'';
+    if(next!=='graphic-generator'){
+      active=false;
+      document.body.classList.remove('jd-graphic-active');
+    }
+    install();
+  });
+  [250,700,1500].forEach(t=>setTimeout(install,t));
 
 })();

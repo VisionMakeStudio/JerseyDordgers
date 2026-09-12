@@ -1687,6 +1687,12 @@
     }
   }, true);
 
+  document.addEventListener('jd-admin-render', event => {
+    const next=event.detail?.section||document.body.dataset.adminSection||'';
+    if(next==='media')setTimeout(refreshMediaCache,80);
+    if(next==='stats')[80,180].forEach(delay=>setTimeout(decorateStatsImporter,delay));
+  });
+
   document.addEventListener('input', event => {
     if (event.target.matches('#filter')) setTimeout(decorateMediaList, 0);
   });

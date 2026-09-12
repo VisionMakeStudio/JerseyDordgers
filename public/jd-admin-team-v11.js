@@ -649,6 +649,17 @@
     if(oldImport)oldImport.remove();
   }
 
+  document.addEventListener('jd-admin-render',e=>{
+    const next=e.detail?.section||document.body.dataset.adminSection||'';
+    if(next==='players'){
+      sessionStorage.setItem(K_SECTION,'players');
+      [40,120,260].forEach(d=>setTimeout(renderPlayers,d));
+    }else if(next==='stats'){
+      sessionStorage.setItem(K_SECTION,'stats');
+      [40,120,260].forEach(d=>setTimeout(()=>{hideLegacyStatsImporter();renderStatsAdmin()},d));
+    }
+  });
+
   document.addEventListener('click',e=>{
     const nav=e.target.closest('[data-section]');
     if(nav&&!nav.matches('[data-section="players"],[data-section="stats"]'))sessionStorage.removeItem(K_SECTION);
