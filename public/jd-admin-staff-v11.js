@@ -4,7 +4,7 @@
   const $=(s,r=document)=>r.querySelector(s);
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let checking=false,lastCheck=0,isOwner=null,staffCache=[];
+  let checking=false,lastCheck=0,isOwner=null,staffCache=[],staffLoaded=false;
 
   async function request(options={}){
     const response=await fetch('/api/admin/staff',{credentials:'same-origin',cache:'no-store',...options});
@@ -184,7 +184,7 @@
 
   async function loadStaff(){
     const body=await request();
-    staffCache=body.staff||[];
+    staffCache=body.staff||[];staffLoaded=true;
     return staffCache;
   }
 
@@ -196,11 +196,18 @@
   }
 
   function openStaff(){
+    if(document.body.dataset.adminGroup!=='settings'){
+      const settings=$('[data-admin-group="settings"]');
+      if(settings){settings.click();setTimeout(openStaff,30);return;}
+    }
     document.body.classList.remove('admin-menu-open');
     $('#admin-nav')?.classList.remove('open');
     $('#admin-menu-toggle')?.setAttribute('aria-expanded','false');
-    $$('#admin-nav [data-section]').forEach(b=>b.classList.remove('active'));
-    const button=$('#jd-staff-nav');
+    $$('#admin-nav [data-section],#admin-subnav button').forEach(b=>b.classList.remove('active'));
+    $('[data-admin-group="settings"]')?.classList.add('active');
+    document.body.dataset.adminGroup='settings';
+    document.body.dataset.adminSection='staff-access';
+    const button=$('#jd-staff-tab');
     button?.classList.add('active');
     renderStaff();
   }
@@ -210,16 +217,13 @@
     if(!nav||!access||access.coach)return;
 
     const allowed=new Set(['media','channels']);
-    $$('[data-section]',nav).forEach(button=>{
-      button.hidden=!allowed.has(button.dataset.section);
-    });
+    $$('[data-section]',nav).forEach(button=>{button.hidden=!allowed.has(button.dataset.section);});
+    $$('[data-admin-group]',nav).forEach(button=>{button.hidden=button.dataset.adminGroup!=='content';});
+    $$('#admin-subnav [data-section]').forEach(button=>{button.hidden=!allowed.has(button.dataset.section);});
 
-    const activeButton=$('[data-section].active',nav);
-    if(activeButton&&!allowed.has(activeButton.dataset.section)){
+    if(!allowed.has(document.body.dataset.adminSection||'')){
       const media=$('[data-section="media"]',nav);
-      if(media){
-        setTimeout(()=>media.click(),0);
-      }
+      if(media)setTimeout(()=>media.click(),0);
     }
   }
 
@@ -228,7 +232,8 @@
     if(!nav)return;
 
     const now=Date.now();
-    if(checking||now-lastCheck<900)return;
+    if(checking)return;
+    if(now-lastCheck<300){setTimeout(install,320-(now-lastCheck));return;}
     checking=true;lastCheck=now;
 
     try{
@@ -237,19 +242,22 @@
 
       if(access.owner){
         isOwner=true;
-        if(!$('#jd-staff-nav')){
-          await loadStaff();
+        window.JDStaffAccess={open:openStaff};
+        if(!staffLoaded)await loadStaff();
+        const subnav=$('#admin-subnav');
+        if(document.body.dataset.adminGroup==='settings'&&subnav&&!$('#jd-staff-tab')){
           const button=document.createElement('button');
-          button.id='jd-staff-nav';
+          button.id='jd-staff-tab';
           button.type='button';
+          button.className='admin-subnav-tab admin-utility-tab';
           button.textContent='Staff Access';
           button.addEventListener('click',openStaff);
-          const mobileSite=nav.querySelector('.admin-mobile-site');
-          nav.insertBefore(button,mobileSite||null);
+          subnav.append(button);
         }
       }else{
         isOwner=false;
-        $('#jd-staff-nav')?.remove();
+        delete window.JDStaffAccess;
+        $('#jd-staff-tab')?.remove();
       }
     }catch(error){
       if(error.status===403)isOwner=false;

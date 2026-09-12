@@ -85,3 +85,28 @@
 @media (min-width:901px) and (max-height:540px){
   .jd-graphic-stage-wrap{position:static!important}
 }
+
+/* Jersey Dodgers Phase 3 — unlimited local AI background removal */
+.jd-free-badge{align-self:flex-start;padding:6px 8px;border:1px solid rgba(87,218,168,.35);border-radius:999px;background:rgba(87,218,168,.08);color:#72e0b4;font-size:8px;font-weight:900;letter-spacing:.09em}
+.jd-remover-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.jd-remover-card{display:grid!important;gap:4px!important;min-height:62px!important;text-align:left!important;padding:11px 12px!important;border-radius:8px!important}
+.jd-remover-card strong{font-size:10px;letter-spacing:.01em}.jd-remover-card small{font-size:8px;font-weight:600;color:#8fa5bb;line-height:1.35}
+.jd-remover-card.free{background:linear-gradient(135deg,rgba(20,71,57,.9),rgba(11,36,33,.95))!important;border-color:#357863!important}.jd-remover-card.free:hover{background:linear-gradient(135deg,rgba(27,91,72,.95),rgba(12,45,39,.98))!important;border-color:#54b893!important}.jd-remover-card.free small{color:#8ed7bd}
+.jd-remover-card.hq{background:linear-gradient(135deg,rgba(23,55,91,.92),rgba(12,28,48,.98))!important;border-color:#345f8c!important}.jd-remover-card.hq small{color:#8fbce6}
+.jd-auto-remover{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(145px,.85fr);gap:8px;align-items:end;padding:9px;border:1px solid #263b50;border-radius:7px;background:#09121b}.jd-auto-remover .jd-bg-toggle{margin-bottom:3px}.jd-auto-remover label:last-child{margin:0}
+.jd-local-cleanup{display:block;border:1px solid #29445b;border-radius:8px;background:linear-gradient(180deg,#0b1722,#09121b)}.jd-local-cleanup>summary{cursor:pointer;list-style:none;padding:10px 11px;color:#d9e8f5;font-size:9px;font-weight:900;letter-spacing:.035em;text-transform:uppercase}.jd-local-cleanup>summary::-webkit-details-marker{display:none}.jd-local-cleanup>summary::after{content:'+';float:right;color:#71d8b1;font-size:15px;line-height:10px}.jd-local-cleanup[open]>summary::after{content:'–'}.jd-cleanup-body{display:grid;gap:8px;padding:0 10px 10px;border-top:1px solid #21384d}.jd-cleanup-body>p{margin:9px 0 2px!important;color:#8097ad!important;font-size:8px!important}.jd-cleanup-body .jd-placement-row{grid-template-columns:76px 1fr 42px}.jd-cleanup-body button{justify-self:start;padding:8px 10px!important}
+.jd-bg-status{padding:8px 9px;border-left:2px solid #2d4c67;background:#08111a;line-height:1.45}.jd-bg-status.busy{border-left-color:#58a7f0;background:#0a1724}.jd-bg-status.good{border-left-color:#62c99f;background:#091914}.jd-bg-status.error{border-left-color:#e26372;background:#1a0d11}
+@media(max-width:620px){.jd-remover-grid,.jd-auto-remover{grid-template-columns:1fr}.jd-cleanup-body .jd-placement-row{grid-template-columns:72px 1fr 38px}}
+
+/* Jersey Dodgers Phase 4 — premium poster systems + custom branding */
+.jd-edge-intensity{margin-top:8px;padding:9px 10px;border:1px solid #28445d;border-radius:8px;background:linear-gradient(180deg,#0b1722,#08111a)}
+.jd-edge-intensity .jd-placement-row{grid-template-columns:92px 1fr 46px}
+.jd-branding-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end}
+.jd-logo-upload{display:grid;gap:5px}.jd-logo-upload input{padding:7px!important;font-size:9px!important}
+.jd-logo-status{margin-top:7px;padding:7px 9px;border-left:2px solid #3b86c9;background:#08121b;color:#91a9bf;font-size:8px;line-height:1.4}
+.jd-logo-adjust{display:grid;gap:7px;margin-top:9px;padding:10px;border:1px solid #273f55;border-radius:8px;background:#09131d}
+.jd-logo-adjust .jd-placement-row{grid-template-columns:88px 1fr 46px}
+.jd-graphic-size{white-space:nowrap}
+.jd-style-caption{line-height:1.55!important}
+@media(min-width:901px){.jd-graphic-canvas-shell{width:min(100%,570px,calc(var(--jd-preview-canvas-height,calc(100dvh - 470px))*.8))!important}.jd-preview-placement{width:min(100%,570px)}}
+@media(max-width:620px){.jd-branding-grid{grid-template-columns:1fr}.jd-logo-adjust .jd-placement-row,.jd-edge-intensity .jd-placement-row{grid-template-columns:80px 1fr 42px}}

@@ -7,6 +7,9 @@ const metric=z.string().max(30).refine(v=>!v||v==='-'||/^\d*(\.\d+)?$/.test(v),'
 const stats=z.record(z.string().max(40),metric);
 const color=z.string().regex(/^#[0-9a-fA-F]{6}$/,'Choose a valid color');
 const optionalId=z.union([z.literal(''),id]);
+const awardType=z.enum(['Player of the Week','Hitter of the Week','Pitcher of the Week','Co-Player of the Week','Custom']);
+const awardStat=z.object({label:z.string().max(30),value:z.string().max(30)});
+const awardWinner=z.object({player:id,awardType:awardType.default('Player of the Week'),customAward:short.default(''),statLine:short.default(''),photo:image.default(''),graphic:image.default(''),stats:z.array(awardStat).max(5).default([])});
 export const schemas={
  settings:z.object({teamName:short.min(1),founded:short,tagline:short,heroTitle:short,heroText:text,heroImage:image,logo:image,scriptLogo:image,leagueName:short,leagueLogo:image,leagueJoinUrl:link.default('https://www.primetimebaseballleague.com/teams/?u=PRIMETIMEBASEBALLLEA&s=baseball'),instagram:link,youtube:link.default('https://youtube.com/@JerseyDodgers?si=FP33CxgYEcQ_az5B'),contactEmail:z.union([z.literal(''),z.email()]),applicationEmail:z.union([z.literal(''),z.email()]).default(''),currentSeason:id,championshipTitle:short,championshipText:text,championshipImage:image,tryoutsTitle:short,tryoutsText:text,tryoutsLink:link,sponsorTitle:short,sponsorText:text,footerText:short,creatorName:short.default('Vision Make Studio'),creatorUrl:link.default('https://VisionMakeStudio.com')}),
  seasons:z.object({id,name:short.min(1),status:z.enum(['active','archived','upcoming']),note:text}),
@@ -24,6 +27,7 @@ export const schemas={
  channels:z.object({id,name:short.min(1),eyebrow:short,description:text,logo:image,link,color:color.default('#168bff'),order:z.number().int().min(0).max(999),active:z.boolean()}),
  sponsors:z.object({id,name:short.min(1),logo:image,link,buttonLabel:short.default('Visit sponsor'),description:text,active:z.boolean()}),
  achievements:z.object({id,year:z.string().max(10),title:short.min(1),organization:short}),
+ weeklyAwards:z.object({id,season:id,weekLabel:short.min(1),date:z.string().max(10),title:short.default('Players of the Week'),summary:text.default(''),published:z.boolean().default(true),order:z.number().int().nonnegative().default(0),winners:z.array(awardWinner).min(1).max(2)}),
  spotlights:z.object({id,season:id,player:id,type:z.enum(['Player of the Week','Game Highlight']),title:short.min(1),summary:text,statLine:short,photo:image,date:z.string().max(10),published:z.boolean(),order:z.number().int().nonnegative()})
 };
 export const contentSchema=z.object({
@@ -47,6 +51,7 @@ export const contentSchema=z.object({
  ]),
  sponsors:z.array(schemas.sponsors).max(300),
  achievements:z.array(schemas.achievements).max(100),
+ weeklyAwards:z.array(schemas.weeklyAwards).max(500).default([]),
  spotlights:z.array(schemas.spotlights).max(1000)
 }).superRefine((d,ctx)=>{
  const fail=message=>ctx.addIssue({code:'custom',message});
@@ -60,6 +65,7 @@ export const contentSchema=z.object({
  for(const s of d.stats){if(!has('seasons',s.season)||!has('players',s.player))fail('Stats reference a missing player or season')}
  for(const s of d.playoffStats){if(!has('seasons',s.season)||!has('players',s.player))fail('Playoff stats reference a missing player or season')}
  for(const s of d.standings){if(!has('seasons',s.season)||!has('teams',s.team))fail('Standings reference a missing team or season')}
+ for(const a of d.weeklyAwards){if(!has('seasons',a.season))fail('A weekly award references a missing season');for(const w of a.winners)if(!has('players',w.player))fail('A weekly award references a missing player')}
  for(const s of d.spotlights){if(!has('seasons',s.season)||!has('players',s.player))fail('A player spotlight references a missing player or season')}
  const statKeys=d.stats.map(s=>s.season+':'+s.player);if(new Set(statKeys).size!==statKeys.length)fail('Only one regular-season stats entry per player and season is allowed');
  const playoffStatKeys=d.playoffStats.map(s=>s.season+':'+s.player);if(new Set(playoffStatKeys).size!==playoffStatKeys.length)fail('Only one playoff stats entry per player and season is allowed');
@@ -73,5 +79,5 @@ export function canEdit(user,adminEmail){
 export function publicContent(data){
  const normalized=contentSchema.parse(data);
  const {jerseyRecords,...safe}=normalized;
- return {...safe,rosters:normalized.rosters.map(({source,...roster})=>roster),playoffRosters:normalized.playoffRosters.map(({source,...roster})=>roster),media:normalized.media.filter(x=>x.published),channels:normalized.channels.filter(x=>x.active),sponsors:normalized.sponsors.filter(x=>x.active),spotlights:normalized.spotlights.filter(x=>x.published)};
+ return {...safe,rosters:normalized.rosters.map(({source,...roster})=>roster),playoffRosters:normalized.playoffRosters.map(({source,...roster})=>roster),media:normalized.media.filter(x=>x.published),channels:normalized.channels.filter(x=>x.active),sponsors:normalized.sponsors.filter(x=>x.active),weeklyAwards:normalized.weeklyAwards.filter(x=>x.published),spotlights:normalized.spotlights.filter(x=>x.published)};
 }

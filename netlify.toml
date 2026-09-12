@@ -41,6 +41,10 @@ from = "/standings/*"
 to = "/index.html"
 status = 200
 [[redirects]]
+from = "/players-of-the-week/*"
+to = "/index.html"
+status = 200
+[[redirects]]
 from = "/game/*"
 to = "/index.html"
 status = 200
