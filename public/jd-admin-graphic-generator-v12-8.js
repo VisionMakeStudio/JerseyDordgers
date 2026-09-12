@@ -30,7 +30,7 @@
     classic:{scale:1.03,x:52,y:0,edge:'shadow',intensity:30,grade:'clean'}
   };
 
-  let data=null,access=null,active=false,installing=false;
+  let data=null,access=null,active=false,openPromise=null;
   let selectedPlayerId='',selectedSeasonId='',phase='regular';
   let photoSource='',photoImage=null,photoLabel='';
   let cutoutCanvas=null,cutoutSource='';
@@ -689,6 +689,8 @@
   }
 
   async function openGenerator(){
+    if(openPromise)return openPromise;
+    openPromise=(async()=>{
     active=true;
     document.body.classList.add('jd-graphic-active');
     document.body.classList.remove('admin-menu-open');
@@ -708,31 +710,11 @@
       resetStyleStates();resetStats();resetText();await loadLogos();
       try{await document.fonts?.load?.(`72px ${SIGNATURE_FONT}`);await document.fonts?.ready}catch{}
       renderControls();await useProfilePhoto();
-    }catch(e){setStatus(e.message,true)}
+    }catch(e){setStatus(e.message,true);throw e}
+    })();
+    try{return await openPromise}finally{openPromise=null}
   }
 
   window.JDGraphicGenerator={open:openGenerator};
-
-  async function install(){
-    if(installing)return;installing=true;
-    try{
-      access=await api('/api/admin/access');
-      const mainButton=$('[data-admin-group="graphic"]');
-      if(!access.media){delete window.JDGraphicGenerator;if(mainButton)mainButton.hidden=true;return}
-      if(mainButton)mainButton.hidden=false;
-      window.JDGraphicGenerator={open:openGenerator};
-      if(document.body.dataset.adminSection==='graphic-generator'&&!active)openGenerator();
-    }catch{}finally{installing=false}
-  }
-
-  document.addEventListener('jd-admin-render',event=>{
-    const next=event.detail?.section||document.body.dataset.adminSection||'';
-    if(next!=='graphic-generator'){
-      active=false;
-      document.body.classList.remove('jd-graphic-active');
-    }
-    install();
-  });
-  [250,700,1500].forEach(t=>setTimeout(install,t));
 
 })();

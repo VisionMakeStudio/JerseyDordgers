@@ -29,3 +29,38 @@
 @media(max-width:420px){
  .compact-game-meta{grid-template-columns:1fr}.compact-game-meta>small{text-align:left}.compact-matchup b{font-size:10px}.compact-game-details{grid-template-columns:1fr auto}.home-player-card{flex-basis:145px}.home-player-photo{height:168px}
 }
+
+/* Stability v2 — dedicated home video block + recent results only */
+.home-video-section{margin-top:42px}
+.home-video-section>.media-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.home-video-section .media-card{min-width:0;background:#0c1420;border-color:#26384c}
+.home-video-section .media-copy{padding:14px 16px}
+.home-video-section .media-copy h3{margin:6px 0 0;font-size:14px}
+.home-video-section .media-copy p{display:none}
+.home-results-stack{max-width:760px}
+.home-results-stack .home-game-mini:first-of-type{padding-top:0}
+
+/* The score strip is a glanceable bar, not a second large game card. */
+@media(max-width:980px){
+ #ticker .ticker-wrap{min-height:0!important}
+ #ticker .ticker-label{padding:7px 10px!important}
+ #ticker .score-track{padding:6px 8px!important;gap:6px!important;min-height:0!important}
+ #ticker .score-card{flex-basis:min(72vw,360px)!important;min-height:0!important;height:auto!important;padding:7px 9px!important;border-radius:5px!important}
+ #ticker .score-card>small{display:block;margin:0 0 2px!important;font-size:7px!important;line-height:1.1!important}
+ #ticker .score-card>span{height:22px!important;min-height:22px!important;gap:5px!important;font-size:10px!important}
+ #ticker .score-card .mark,#ticker .score-card img,#ticker .score-card .monogram{width:21px!important;height:21px!important;min-width:21px!important}
+ #ticker .score-card>span b{font-size:10px!important;line-height:1!important}
+ #ticker .score-card>span strong{font-size:14px!important;line-height:1!important}
+ #ticker .all-scores{padding:7px 10px!important;font-size:10px!important}
+}
+@media(max-width:700px){
+ .home-video-section{margin-top:30px}
+ .home-video-section>.media-grid{display:flex;overflow-x:auto;gap:9px;scroll-snap-type:x mandatory;scrollbar-width:none;padding-bottom:5px}
+ .home-video-section>.media-grid::-webkit-scrollbar{display:none}
+ .home-video-section .media-card{flex:0 0 82%;scroll-snap-align:start}
+ .home-video-section .video-frame,.home-video-section .media-video{min-height:0}
+ .home-results-stack{max-width:none;padding:13px}
+ #ticker .ticker-label small{display:none!important}
+ #ticker .ticker-label{font-size:10px!important}
+ #ticker .score-card{flex-basis:calc(100vw - 118px)!important}
+}

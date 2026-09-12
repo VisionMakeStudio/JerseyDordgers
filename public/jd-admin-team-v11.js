@@ -16,8 +16,8 @@
   }
   async function refreshState(){state=await api('/api/admin/content');state.data.rosters||=[];state.data.playoffRosters||=[];state.data.jerseyRecords||=[];state.data.playoffStats||=[];return state;}
   function setStatus(text,error=false){const n=$('#status');if(n){n.textContent=text;n.className=error?'error':'success';}}
-  function active(){return Boolean($('[data-section="players"].active'));}
-  function activeStats(){return Boolean($('[data-section="stats"].active'));}
+  function active(){return document.body.dataset.adminSection==='players';}
+  function activeStats(){return document.body.dataset.adminSection==='stats';}
   function norm(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/\([^)]*\)/g,'').replace(/[^a-z0-9]/g,'');}
   function yearOf(s){const name=typeof s==='string'?(state?.data?.seasons?.find(x=>x.id===s)?.name||s):(s?.name||'');return Number(String(name).match(/\b(20\d{2})\b/)?.[1]||0);}
   function termRank(name=''){if(/fall/i.test(name))return 3;if(/summer/i.test(name))return 2;if(/spring/i.test(name))return 1;return 0;}
@@ -81,7 +81,7 @@
     const latest=await api('/api/admin/content');latest.data.rosters||=[];latest.data.playoffRosters||=[];latest.data.jerseyRecords||=[];latest.data.playoffStats||=[];await mutator(latest.data);
     state=await api('/api/admin/content',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:latest.revision,data:latest.data})});setStatus(msg);return state;
   }
-  async function publishReload(mutator,msg){sessionStorage.setItem(K_SECTION,'players');sessionStorage.setItem(K_SEASON,currentSeason());await publish(mutator,msg);setTimeout(()=>location.reload(),250);}
+  async function publishReload(mutator,msg){sessionStorage.setItem(K_SEASON,currentSeason());await publish(mutator,msg);await refreshState();if(active())await renderPlayers();}
   function showEditor(html){const d=$('#editor'),c=$('#editor-content');if(!d||!c)return null;c.innerHTML=html;if(!d.open)d.showModal();return c;}
   function closeEditor(){const d=$('#editor');if(d?.open)d.close();}
 
@@ -116,6 +116,9 @@
       $('#jd-v9-add-player')?.addEventListener('click',()=>openPlayerEditor('',sid,phase));
       const toolsToggle=$('#jd-v11-tools-toggle'),toolsMenu=$('#jd-v11-tools-menu');
       toolsToggle?.addEventListener('click',e=>{e.stopPropagation();const open=toolsMenu?.hasAttribute('hidden');if(open)toolsMenu?.removeAttribute('hidden');else toolsMenu?.setAttribute('hidden','');toolsToggle.setAttribute('aria-expanded',String(Boolean(open)))});
+      $$('[data-team-tool]',content).forEach(button=>button.addEventListener('click',e=>{e.preventDefault();toolsMenu?.setAttribute('hidden','');toolsToggle?.setAttribute('aria-expanded','false');tool(button.dataset.teamTool)}));
+      $$('[data-team-action]',content).forEach(button=>button.addEventListener('click',e=>{e.preventDefault();const id=button.dataset.player,action=button.dataset.teamAction;if(action==='edit')openPlayerEditor(id,sid,phase);if(action==='remove')setRosterActive(id,false);if(action==='restore')setRosterActive(id,true);if(action==='delete-season')deleteSeasonPlayer(id)}));
+      content.addEventListener('click',e=>{if(!e.target.closest('.jd-player-tools')){toolsMenu?.setAttribute('hidden','');toolsToggle?.setAttribute('aria-expanded','false')}});
     }catch(e){setStatus(e.message,true)}finally{rendering=false}
   }
 
@@ -372,7 +375,7 @@
             grouped.forEach((rows,pid)=>{const merged=mergeStats(rows),primary=rows.find(r=>r.number)||rows[0];data.playoffRosters.push({id:uid(),season:sid,player:pid,number:primary.number||'',position:primary.position||'',active:true,source:''});data.playoffStats.push({id:uid(),season:sid,player:pid,bat:merged.bat,pitch:merged.pitch,fielding:merged.fielding,source:`GameChanger · ${label} · Playoffs`})});
           }
         },chosenPhase==='playoffs'?'GameChanger playoff roster and stats imported.':'GameChanger regular-season roster and stats imported.');
-        closeEditor();sessionStorage.setItem(K_SECTION,'players');setTimeout(()=>location.reload(),300);
+        closeEditor();await refreshState();if(active())await renderPlayers();
       }catch(e){apply.disabled=false;message.textContent=e.message}
     };
   }
@@ -458,7 +461,7 @@
             statsRows.forEach(row=>{let rosterIndex=row.rosterImportIndex;if(rosterIndex===null||rosterIndex===undefined){const chosen=statsChoices.get(row.importIndex);if(chosen==='__skip__'||chosen===undefined)return;rosterIndex=Number(chosen)}const p=assigned.get(Number(rosterIndex));if(!p)return;data[target].push({id:uid(),season:sid,player:p.id,bat:row.bat||{},pitch:row.pitch||{},fielding:row.fielding||{},source:`NJABL · ${chosenPhase==='playoffs'?'Playoffs':'Regular season'} · ${String(statsResult.source||statsUrl.value).slice(0,220)}`})})
           }
         },statsResult?`Historical ${chosenPhase==='playoffs'?'playoff':'regular-season'} roster and stats imported.`:`Historical ${chosenPhase==='playoffs'?'playoff':'regular-season'} roster imported.`);
-        closeEditor();sessionStorage.setItem(K_SECTION,'players');setTimeout(()=>location.reload(),300);
+        closeEditor();await refreshState();if(active())await renderPlayers();
       }catch(e){apply.disabled=false;message.textContent=e.message}
     };
   }
@@ -508,7 +511,7 @@
             data[target].push({id:uid(),season:sid,player:pid,bat:row.bat||{},pitch:row.pitch||{},fielding:row.fielding||{},source:`NJABL · ${chosenPhase==='playoffs'?'Playoffs':'Regular season'} · ${String(result.source||url.value).slice(0,220)}`})
           });
         },`${chosenPhase==='playoffs'?'Playoff':'Regular-season'} stats imported for ${season?.name||'this season'}.`);
-        sessionStorage.setItem(K_ROSTER_PHASE,chosenPhase);closeEditor();if(returnTo==='stats'){sessionStorage.setItem(K_SECTION,'stats');await refreshState();renderStatsAdmin()}else{sessionStorage.setItem(K_SECTION,'players');setTimeout(()=>location.reload(),300)}
+        sessionStorage.setItem(K_ROSTER_PHASE,chosenPhase);closeEditor();await refreshState();if(returnTo==='stats'){if(activeStats())await renderStatsAdmin()}else if(active()){await renderPlayers()}
       }catch(e){apply.disabled=false;message.textContent=e.message}
     };
   }
@@ -649,33 +652,9 @@
     if(oldImport)oldImport.remove();
   }
 
-  document.addEventListener('jd-admin-render',e=>{
-    const next=e.detail?.section||document.body.dataset.adminSection||'';
-    if(next==='players'){
-      sessionStorage.setItem(K_SECTION,'players');
-      [40,120,260].forEach(d=>setTimeout(renderPlayers,d));
-    }else if(next==='stats'){
-      sessionStorage.setItem(K_SECTION,'stats');
-      [40,120,260].forEach(d=>setTimeout(()=>{hideLegacyStatsImporter();renderStatsAdmin()},d));
-    }
-  });
+  window.JDTeamAdmin={
+    renderPlayers:async()=>{sessionStorage.setItem(K_SECTION,'players');return renderPlayers()},
+    renderStats:async()=>{sessionStorage.setItem(K_SECTION,'stats');hideLegacyStatsImporter();return renderStatsAdmin()}
+  };
 
-  document.addEventListener('click',e=>{
-    const nav=e.target.closest('[data-section]');
-    if(nav&&!nav.matches('[data-section="players"],[data-section="stats"]'))sessionStorage.removeItem(K_SECTION);
-
-    if(e.target.closest('[data-section="players"]')){sessionStorage.setItem(K_SECTION,'players');[80,180,350].forEach(d=>setTimeout(renderPlayers,d));return}
-    if(e.target.closest('[data-section="stats"]')){sessionStorage.setItem(K_SECTION,'stats');[80,180,350].forEach(d=>setTimeout(()=>{hideLegacyStatsImporter();renderStatsAdmin()},d));return}
-
-    const tools=$('.jd-player-tools');if(tools&&!tools.contains(e.target)){const menu=$('#jd-v11-tools-menu',tools),toggle=$('#jd-v11-tools-toggle',tools);menu?.setAttribute('hidden','');toggle?.setAttribute('aria-expanded','false')}
-    const t=e.target.closest('[data-team-tool]');if(t){e.preventDefault();const menu=$('#jd-v11-tools-menu');const toggle=$('#jd-v11-tools-toggle');menu?.setAttribute('hidden','');toggle?.setAttribute('aria-expanded','false');tool(t.dataset.teamTool);return}
-    const a=e.target.closest('[data-team-action]');if(a){e.preventDefault();const id=a.dataset.player;if(a.dataset.teamAction==='edit')openPlayerEditor(id,currentSeason(),currentRosterPhase());if(a.dataset.teamAction==='remove')setRosterActive(id,false);if(a.dataset.teamAction==='restore')setRosterActive(id,true);if(a.dataset.teamAction==='delete-season')deleteSeasonPlayer(id)}
-  });
-
-  function restore(){
-    if(restored)return;
-    const section=sessionStorage.getItem(K_SECTION);if(!['players','stats'].includes(section))return;
-    const b=$(`[data-section="${section}"]`);if(!b)return;restored=true;b.click();
-  }
-  [800,1300,2100,3200].forEach(d=>setTimeout(restore,d));
 })();

@@ -1708,5 +1708,4 @@
     setTimeout(decorateMediaList, 120);
   }, true);
 
-  [700, 1500, 2800].forEach(delay => setTimeout(refreshMediaCache, delay));
 })();

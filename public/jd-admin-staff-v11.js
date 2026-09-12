@@ -4,7 +4,7 @@
   const $=(s,r=document)=>r.querySelector(s);
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let checking=false,lastCheck=0,isOwner=null,staffCache=[],staffLoaded=false;
+  let isOwner=null,staffCache=[],staffLoaded=false,openPromise=null;
 
   async function request(options={}){
     const response=await fetch('/api/admin/staff',{credentials:'same-origin',cache:'no-store',...options});
@@ -195,57 +195,28 @@
     return body;
   }
 
-  function openStaff(){
-    document.body.classList.remove('admin-menu-open');
-    $('#admin-nav')?.classList.remove('open');
-    $('#admin-menu-toggle')?.setAttribute('aria-expanded','false');
-    document.body.dataset.adminGroup='settings';
-    document.body.dataset.adminSection='staff-access';
-    $$('[data-admin-group]').forEach(button=>button.classList.toggle('active',button.dataset.adminGroup==='settings'));
-    $$('#admin-subnav [data-section]').forEach(button=>button.classList.toggle('active',button.dataset.section==='staff-access'));
-    renderStaff();
-  }
-
-  function applyMediaNavigation(access){
-    const nav=$('#admin-nav');
-    if(!nav||!access||access.coach)return;
-    const allowed=new Set(['media','channels']);
-    $$('[data-admin-group]',nav).forEach(button=>{button.hidden=button.dataset.adminGroup!=='content';});
-    $$('#admin-subnav [data-section]').forEach(button=>{button.hidden=!allowed.has(button.dataset.section);});
-    if(!allowed.has(document.body.dataset.adminSection||'')){
-      const go=window.JDAdminNavigate;
-      if(typeof go==='function')setTimeout(()=>go('media'),0);
-    }
-  }
-
-  async function install(){
-    const nav=$('#admin-nav');
-    if(!nav)return;
-    const now=Date.now();
-    if(checking)return;
-    if(now-lastCheck<500){setTimeout(install,520-(now-lastCheck));return;}
-    checking=true;lastCheck=now;
-    try{
-      const access=await accessInfo();
-      applyMediaNavigation(access);
-      const staffTab=$('#admin-subnav [data-section="staff-access"]');
-      if(access.owner){
-        isOwner=true;
-        if(staffTab)staffTab.hidden=false;
-        window.JDStaffAccess={open:openStaff};
-        if(!staffLoaded)await loadStaff();
-        if(document.body.dataset.adminSection==='staff-access')openStaff();
-      }else{
-        isOwner=false;
-        if(staffTab)staffTab.hidden=true;
-        delete window.JDStaffAccess;
+  async function openStaff(){
+    if(openPromise)return openPromise;
+    openPromise=(async()=>{
+      const content=$('#section-content');
+      try{
+        const access=await accessInfo();
+        isOwner=Boolean(access.owner);
+        if(!isOwner){
+          if(content)content.innerHTML='<div class="jd-plugin-loading is-error"><strong>Owner access required.</strong><span>Staff Access can only be managed by the Jersey Dodgers owner account.</span></div>';
+          return;
+        }
+        await loadStaff();
+        if(document.body.dataset.adminSection==='staff-access')renderStaff();
+      }catch(error){
+        status(error.message,true);
+        if(content)content.innerHTML=`<div class="jd-plugin-loading is-error"><strong>Staff Access could not load.</strong><span>${esc(error.message)}</span></div>`;
+        throw error;
       }
-    }catch(error){
-      if(error.status===403){isOwner=false;const staffTab=$('#admin-subnav [data-section="staff-access"]');if(staffTab)staffTab.hidden=true;}
-    }finally{checking=false}
+    })();
+    try{return await openPromise}finally{openPromise=null}
   }
 
-  document.addEventListener('jd-admin-render',()=>install());
-  [350,900,1800].forEach(delay=>setTimeout(install,delay));
+  window.JDStaffAccess={open:openStaff};
 
 })();
