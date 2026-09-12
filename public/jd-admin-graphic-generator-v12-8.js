@@ -1,12 +1,14 @@
 (() => {
   'use strict';
-  if (window.__jdGraphicGeneratorV128Loaded) return;
-  window.__jdGraphicGeneratorV128Loaded = true;
+  if (window.__jdGraphicGeneratorV129Loaded) return;
+  window.__jdGraphicGeneratorV129Loaded = true;
 
   const $=(s,r=document)=>r.querySelector(s);
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const CANVAS_W=1080,CANVAS_H=1350;
+  const GENERATOR_VERSION='12.9',MAX_TRANSFER_BYTES=4_000_000;
+  const EDITORIAL_BACKGROUND='/assets/jd-editorial-city-v12-9.png';
   const SCRIPT_LOGO='/assets/jd-script-logo-official.png';
   const D_MARK='/assets/jd-d-mark-official.png';
   const clamp=(n,min,max)=>Math.max(min,Math.min(max,Number(n)||0));
@@ -24,8 +26,8 @@
   let selectedPlayerId='',selectedSeasonId='',phase='regular';
   let photoSource='',photoImage=null,photoLabel='';
   let cutoutCanvas=null,cutoutSource='';
-  let logoScript=null,logoMark=null;
-  let generated=false,drag=null;
+  let logoScript=null,logoMark=null,editorialBackground=null;
+  let generated=false,drag=null,previewResizeObserver=null;
   let statRows=[];
   let textState={};
   let graphicStyle='editorial';
@@ -40,6 +42,7 @@
   let signatureScale=1,signatureGap=2,signatureLastX=38,signatureRotation=-4,signatureNumberX=18,signatureNumberY=126;
   const tintCache=new WeakMap();
   const cutoutCache=new Map();
+  const pendingCutouts=new Map();
 
   async function api(url){
     const r=await fetch(url,{credentials:'same-origin',cache:'no-store'});
@@ -130,19 +133,25 @@
     try{return await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('PhotoRoom returned an image, but this browser could not decode it.'));img.src=url})}
     finally{setTimeout(()=>URL.revokeObjectURL(url),0)}
   }
-  async function loadLogos(){if(!logoScript)logoScript=await loadImage(SCRIPT_LOGO).catch(()=>null);if(!logoMark)logoMark=await loadImage(D_MARK).catch(()=>null)}
+  async function loadLogos(){await Promise.all([
+    !logoScript&&loadImage(SCRIPT_LOGO).then(img=>logoScript=img).catch(()=>null),
+    !logoMark&&loadImage(D_MARK).then(img=>logoMark=img).catch(()=>null),
+    !editorialBackground&&loadImage(EDITORIAL_BACKGROUND).then(img=>editorialBackground=img).catch(()=>null)
+  ])}
   function cutoutKey(){return `${selectedPlayerId||'player'}::${photoSource||''}`}
   function restoreCachedCutout(){const cached=cutoutCache.get(cutoutKey());if(cached){cutoutCanvas=cached;cutoutSource=photoSource;return true}return false}
   async function useProfilePhoto(){
     const p=selectedPlayer();
     if(!p?.photo){photoSource='';photoImage=null;photoLabel='No profile photo';cutoutCanvas=null;cutoutSource='';paintPhotoPreview();renderPoster();return}
-    photoSource=p.photo;photoLabel='Profile photo';cutoutCanvas=null;cutoutSource='';
-    try{photoImage=await loadImage(photoSource);restoreCachedCutout();paintPhotoPreview();renderPoster()}catch(e){setBgStatus(e.message,'error')}
+    photoSource=p.photo;photoImage=null;photoLabel='Profile photo';cutoutCanvas=null;cutoutSource='';
+    const source=photoSource;paintPhotoPreview();renderPoster();
+    try{const img=await loadImage(source);if(source!==photoSource)return;photoImage=img;restoreCachedCutout();paintPhotoPreview();renderPoster()}catch(e){if(source===photoSource)setBgStatus(e.message,'error')}
   }
   async function useUploadedPhoto(file){
     if(!file)return;if(photoSource?.startsWith('blob:'))URL.revokeObjectURL(photoSource);
-    photoSource=URL.createObjectURL(file);photoLabel=file.name||'Uploaded photo';cutoutCanvas=null;cutoutSource='';
-    try{photoImage=await loadImage(photoSource);restoreCachedCutout();paintPhotoPreview();renderPoster()}catch(e){setBgStatus(e.message,'error')}
+    photoSource=URL.createObjectURL(file);photoImage=null;photoLabel=file.name||'Uploaded photo';cutoutCanvas=null;cutoutSource='';
+    const source=photoSource;paintPhotoPreview();renderPoster();
+    try{const img=await loadImage(source);if(source!==photoSource)return;photoImage=img;restoreCachedCutout();paintPhotoPreview();renderPoster()}catch(e){if(source===photoSource)setBgStatus(e.message,'error')}
   }
   async function useSignatureUpload(file){
     if(!file)return;if(signatureSource?.startsWith('blob:'))URL.revokeObjectURL(signatureSource);
@@ -155,39 +164,86 @@
   }
   function setBgStatus(text,kind=''){const n=$('#jd-bg-status');if(n){n.textContent=text;n.className=`jd-bg-status ${kind}`}}
 
-  async function preparedPhotoBlob(){
-    if(!photoImage)throw Error('Choose a player photo first.');
-    const iw=photoImage.naturalWidth||photoImage.width,ih=photoImage.naturalHeight||photoImage.height,maxSide=3000,ratio=Math.min(1,maxSide/Math.max(iw,ih));
-    const w=Math.max(1,Math.round(iw*ratio)),h=Math.max(1,Math.round(ih*ratio)),canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
-    const ctx=canvas.getContext('2d');ctx.drawImage(photoImage,0,0,w,h);
-    return await new Promise((resolve,reject)=>{try{canvas.toBlob(blob=>blob?resolve(blob):reject(Error('Could not prepare the player photo.')),'image/jpeg',.94)}catch(e){reject(e)}});
+  async function preparedPhotoBlob(img){
+    if(!img)throw Error('Choose a player photo first.');
+    const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;
+    if(!iw||!ih)throw Error('This player photo has no usable dimensions.');
+    // Keep the upload below Netlify's binary limit, with enough detail for a 1080×1350 poster.
+    let maxSide=2000;
+    for(let attempt=0;attempt<3;attempt++){
+      const ratio=Math.min(1,maxSide/Math.max(iw,ih));
+      const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(iw*ratio));canvas.height=Math.max(1,Math.round(ih*ratio));
+      const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const blob=await new Promise((resolve,reject)=>{try{canvas.toBlob(b=>b?resolve(b):reject(Error('Could not prepare the player photo.')),'image/jpeg',.92)}catch(e){reject(e)}});
+      if(blob.size<=MAX_TRANSFER_BYTES)return blob;
+      maxSide=Math.round(maxSide*.75);
+    }
+    throw Error('Player photo is too large. Upload a smaller image.');
+  }
+  async function readCutoutResponse(response){
+    const type=String(response.headers.get('content-type')||'').toLowerCase();
+    let body=null;
+    if(type.includes('application/json')){try{body=await response.json()}catch{throw Error('The server returned incomplete image data. Reload Admin and try again.')}}
+    if(!response.ok)throw Error(body?.error||`Background removal failed (HTTP ${response.status}). Sign in again or retry with a smaller photo.`);
+    if(response.headers.get('X-JD-Generator-Version')!==GENERATOR_VERSION||body?.version!==GENERATOR_VERSION){
+      throw Error('The Admin page and background-removal function are different versions. Deploy all V12.9 patch files together, then reload Admin.');
+    }
+    if(body.mimeType!=='image/png'||!Number.isInteger(body.byteLength)||body.byteLength<45||body.byteLength>MAX_TRANSFER_BYTES||typeof body.imageBase64!=='string'||body.imageBase64.length!==4*Math.ceil(body.byteLength/3)){
+      throw Error('The server did not return a complete PNG. Reload Admin and try again.');
+    }
+    let binary;try{binary=atob(body.imageBase64)}catch{throw Error('The returned PNG data is damaged. Please try again.')}
+    const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+    if(bytes.length!==body.byteLength||![137,80,78,71,13,10,26,10].every((b,i)=>bytes[i]===b))throw Error('The returned PNG is incomplete or invalid. Please try again.');
+    return new Blob([bytes],{type:'image/png'});
+  }
+  async function requestCutout(source,img){
+    let input;
+    try{input=await preparedPhotoBlob(img)}catch{
+      try{const r=await fetch(source,{credentials:'same-origin'});if(!r.ok)throw Error();input=await r.blob()}catch{throw Error('This photo could not be prepared. Upload the original JPEG, PNG or WebP and try again.')}
+    }
+    if(!input.size||input.size>MAX_TRANSFER_BYTES)throw Error('Use a player photo under 4 MB.');
+    if(!['image/jpeg','image/png','image/webp'].includes(input.type))throw Error('Upload a JPEG, PNG or WebP player photo.');
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),55_000);
+    try{
+      const response=await fetch('/api/admin/remove-background',{
+        method:'POST',credentials:'same-origin',cache:'no-store',signal:controller.signal,
+        headers:{'Content-Type':input.type,'Accept':'application/json','X-JD-Generator-Version':GENERATOR_VERSION},body:input
+      });
+      const result=await decodeImageBlob(await readCutoutResponse(response));
+      try{
+        const iw=result.naturalWidth||result.width,ih=result.naturalHeight||result.height;
+        if(!iw||!ih)throw Error('PhotoRoom returned an image with no usable dimensions.');
+        const canvas=document.createElement('canvas');canvas.width=iw;canvas.height=ih;
+        canvas.getContext('2d').drawImage(result,0,0,iw,ih);
+        return trimTransparent(canvas);
+      }finally{result.close?.()}
+    }catch(e){if(e.name==='AbortError')throw Error('Background removal took too long. Try again with a smaller photo.');throw e}
+    finally{clearTimeout(timer)}
   }
   async function removeBackground(){
     if(!photoImage||!photoSource)throw Error('Choose a player photo first.');
     if(cutoutCanvas&&cutoutSource===photoSource)return cutoutCanvas;
     if(restoreCachedCutout()){setBgStatus('PhotoRoom cutout restored from this session.','good');paintPhotoPreview();renderPoster();return cutoutCanvas}
+    const source=photoSource,key=cutoutKey();
     setBgStatus('PhotoRoom is creating a high-quality transparent cutout…','busy');
-    let input;
-    try{input=await preparedPhotoBlob()}catch{
-      try{const r=await fetch(photoSource,{credentials:'same-origin'});if(!r.ok)throw Error();input=await r.blob()}catch{throw Error('This player photo could not be prepared for PhotoRoom. Upload the original photo and try again.')}
+    // Remove and Generate share one paid request, even when clicked together.
+    if(!pendingCutouts.has(key)){
+      const job=requestCutout(source,photoImage).then(canvas=>{
+        cutoutCache.set(key,canvas);
+        while(cutoutCache.size>6)cutoutCache.delete(cutoutCache.keys().next().value);
+        return canvas;
+      }).finally(()=>pendingCutouts.delete(key));
+      pendingCutouts.set(key,job);
     }
-    const response=await fetch('/api/admin/remove-background',{method:'POST',credentials:'same-origin',headers:{'Content-Type':input.type||'image/jpeg'},body:input});
-    if(!response.ok){let body={};try{body=await response.json()}catch{}throw Error(body.error||'PhotoRoom could not remove the background.')}
-    const responseType=String(response.headers.get('content-type')||'').toLowerCase();
-    if(responseType&&!responseType.startsWith('image/')){let detail='';try{detail=(await response.text()).slice(0,180)}catch{}throw Error(`PhotoRoom returned an unexpected response${detail?`: ${detail}`:'.'}`)}
-    const blob=await response.blob();
-    const img=await decodeImageBlob(blob);
-    try{
-      const iw=img.naturalWidth||img.width,ih=img.naturalHeight||img.height;if(!iw||!ih)throw Error('PhotoRoom returned an image with no usable dimensions.');
-      const canvas=document.createElement('canvas');canvas.width=iw;canvas.height=ih;const cctx=canvas.getContext('2d');cctx.clearRect(0,0,iw,ih);cctx.drawImage(img,0,0,iw,ih);
-      cutoutCanvas=trimTransparent(canvas);cutoutSource=photoSource;cutoutCache.set(cutoutKey(),cutoutCanvas);
-    }finally{try{img.close?.()}catch{}}
-    setBgStatus('PhotoRoom background removal complete. Transparent cutout decoded and ready.','good');paintPhotoPreview();renderPoster();return cutoutCanvas;
+    const canvas=await pendingCutouts.get(key);
+    if(key!==cutoutKey())throw Error('The player photo changed during processing. Its cutout was saved for this session; generate again for the selected photo.');
+    cutoutCanvas=canvas;cutoutSource=source;
+    setBgStatus('PhotoRoom background removal complete. Transparent PNG ready.','good');paintPhotoPreview();renderPoster();return canvas;
   }
   function trimTransparent(canvas){
     const ctx=canvas.getContext('2d'),im=ctx.getImageData(0,0,canvas.width,canvas.height),d=im.data;let minX=canvas.width,minY=canvas.height,maxX=-1,maxY=-1;
     for(let y=0;y<canvas.height;y+=2)for(let x=0;x<canvas.width;x+=2)if(d[(y*canvas.width+x)*4+3]>16){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y)}
-    if(maxX<0)return canvas;const pad=14;minX=Math.max(0,minX-pad);minY=Math.max(0,minY-pad);maxX=Math.min(canvas.width-1,maxX+pad);maxY=Math.min(canvas.height-1,maxY+pad);
+    if(maxX<0)throw Error('PhotoRoom returned a transparent image with no visible player. Try another photo.');const pad=14;minX=Math.max(0,minX-pad);minY=Math.max(0,minY-pad);maxX=Math.min(canvas.width-1,maxX+pad);maxY=Math.min(canvas.height-1,maxY+pad);
     const out=document.createElement('canvas');out.width=maxX-minX+1;out.height=maxY-minY+1;out.getContext('2d').drawImage(canvas,minX,minY,out.width,out.height,0,0,out.width,out.height);return out;
   }
 
@@ -218,7 +274,7 @@
     const buildings=[
       [520,1090,30,94],[556,1054,39,130],[603,1114,30,70],[640,1076,45,108],[693,1016,33,168],[733,1086,28,98],[768,1038,44,146],[820,1098,31,86],[858,1047,42,137],[906,1087,27,97],[942,1024,48,160],[1000,1070,33,114],[1040,1102,40,82]
     ];
-    buildings.forEach(([x,y,w,h],i)=>{ctx.fillRect(x,y,w,h);if(i in [1,4,8])ctx.fillRect(x+w*.43,y-18,w*.14,18)});
+    buildings.forEach(([x,y,w,h],i)=>{ctx.fillRect(x,y,w,h);if([1,4,8].includes(i))ctx.fillRect(x+w*.43,y-18,w*.14,18)});
     // Empire/WTC-inspired spires without copying an exact building.
     ctx.fillRect(711,988,5,29);ctx.fillRect(960,987,6,37);
     // Bridge deck + towers/cables.
@@ -255,14 +311,18 @@
   }
   function drawGhostPlayer(ctx,img,mode='left'){
     if(!img)return;const iw=img.width||img.naturalWidth,ih=img.height||img.naturalHeight,targetH=mode==='left'?720:760,targetW=targetH*(iw/ih),x=mode==='left'?-65:435,y=210;
-    ctx.save();ctx.globalAlpha=mode==='left'?.18:.11;ctx.filter='grayscale(1) brightness(.26) contrast(1.3)';ctx.drawImage(img,x,y,targetW,targetH);ctx.restore();
+    ctx.save();ctx.globalAlpha=mode==='left'?.30:.11;ctx.filter='grayscale(1) brightness(.62) contrast(1.3)';ctx.drawImage(img,x,y,targetW,targetH);ctx.restore();
   }
   function drawMainPlayer(ctx,img){
     if(!img)return;const r=playerRect(img);drawEdge(ctx,img,r);
     ctx.save();ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=playerGrade==='clean'?18:28;ctx.shadowOffsetX=8;ctx.shadowOffsetY=18;
     if(playerGrade==='clean')ctx.filter='contrast(1.04) saturate(1.04) brightness(.99)';else if(playerGrade==='high')ctx.filter='contrast(1.22) saturate(1.14) brightness(.94)';else ctx.filter='contrast(1.13) saturate(1.10) brightness(.96)';
     ctx.drawImage(img,r.x,r.y,r.w,r.h);ctx.restore();
-    const fade=ctx.createLinearGradient(0,930,0,1205);fade.addColorStop(0,'rgba(3,8,14,0)');fade.addColorStop(1,'rgba(3,8,14,.65)');ctx.fillStyle=fade;ctx.fillRect(Math.max(0,r.x-25),900,Math.min(CANVAS_W,r.w+50),320);
+    if(graphicStyle==='editorial'){
+      const fade=ctx.createLinearGradient(0,1020,0,CANVAS_H);fade.addColorStop(0,'rgba(0,0,0,0)');fade.addColorStop(1,'rgba(0,0,0,.66)');ctx.fillStyle=fade;ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+    }else{
+      const fade=ctx.createLinearGradient(0,930,0,1205);fade.addColorStop(0,'rgba(3,8,14,0)');fade.addColorStop(1,'rgba(3,8,14,.65)');ctx.fillStyle=fade;ctx.fillRect(Math.max(0,r.x-25),900,Math.min(CANVAS_W,r.w+50),320);
+    }
   }
   function drawSignature(ctx){
     if(signatureMode==='off')return;
@@ -282,18 +342,24 @@
 
 
   function drawEditorialBackground(ctx,playerArt){
-    // Dark charcoal / slate base inspired by the approved poster sample.
-    const bg=ctx.createLinearGradient(0,0,CANVAS_W,CANVAS_H);bg.addColorStop(0,'#15191f');bg.addColorStop(.34,'#0a111a');bg.addColorStop(.73,'#05090e');bg.addColorStop(1,'#010305');ctx.fillStyle=bg;ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
-    // Broad full-canvas texture bands — no visible rectangular overlay.
-    ctx.save();ctx.fillStyle='rgba(24,82,145,.17)';ctx.beginPath();ctx.moveTo(430,-40);ctx.lineTo(675,-40);ctx.lineTo(430,1210);ctx.lineTo(205,1210);ctx.closePath();ctx.fill();ctx.restore();
-    const smoke=ctx.createRadialGradient(740,760,60,740,760,640);smoke.addColorStop(0,'rgba(120,132,145,.11)');smoke.addColorStop(.5,'rgba(65,75,86,.05)');smoke.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=smoke;ctx.fillRect(300,250,780,940);
-    drawEditorialField(ctx);
-    drawEditorialCity(ctx);
+    ctx.fillStyle='#090a0c';ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+    if(editorialBackground){
+      // Same-origin artwork is embedded in the exported PNG, below every editable layer.
+      ctx.drawImage(editorialBackground,0,0,CANVAS_W,CANVAS_H);
+      const shade=ctx.createLinearGradient(0,0,CANVAS_W,0);
+      shade.addColorStop(0,'rgba(0,0,0,.28)');shade.addColorStop(.48,'rgba(0,0,0,.12)');shade.addColorStop(1,'rgba(0,0,0,.04)');
+      ctx.fillStyle=shade;ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+    }else{
+      // Keep the template usable if the background asset has not finished deploying.
+      const smoke=ctx.createRadialGradient(790,1040,15,790,1040,550);
+      smoke.addColorStop(0,'rgba(169,173,180,.24)');smoke.addColorStop(.6,'rgba(80,83,88,.09)');smoke.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=smoke;ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+      drawEditorialCity(ctx);drawEditorialField(ctx);drawNoise(ctx,9000,.07);
+    }
     if(playerArt)drawGhostPlayer(ctx,playerArt,'left');
-    const jersey=String(textState.jerseyNumber||'10').replace(/^#/,'');ctx.save();ctx.globalAlpha=.20;ctx.strokeStyle='rgba(40,106,184,.82)';ctx.lineWidth=3;ctx.font=`900 360px ${TITLE_FONT}`;ctx.strokeText(jersey||'10',4,920);ctx.restore();
-    // Extra low-contrast stadium-light arcs behind the info area.
-    ctx.save();ctx.strokeStyle='rgba(178,190,201,.08)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(820,1160,350,Math.PI*1.10,Math.PI*1.72);ctx.stroke();ctx.beginPath();ctx.arc(820,1160,430,Math.PI*1.13,Math.PI*1.70);ctx.stroke();ctx.restore();
-    drawNoise(ctx,2100,.035);drawVignette(ctx,.80);
+    const jersey=String(textState.jerseyNumber||'10').replace(/^#/,'');
+    ctx.save();ctx.globalAlpha=.32;ctx.strokeStyle='#35659a';ctx.lineWidth=2;ctx.font=`900 360px ${TITLE_FONT}`;ctx.strokeText(jersey||'10',4,920);ctx.restore();
+    drawVignette(ctx,.32);
     if(logoScript)drawImageContain(ctx,logoScript,25,55,360,190,1);
   }
   function drawElectricBackground(ctx){
@@ -365,9 +431,25 @@
   function textEditor(){return `<details class="jd-graphic-details"><summary>Poster text & signature</summary><div class="jd-details-body"><div class="jd-section-title"><div><h3>Poster text</h3><p>Edit any wording while the layout stays locked.</p></div><button type="button" id="jd-reset-text">Reset text</button></div><div class="jd-text-grid"><label class="wide">Top team line<input data-text-field="eyebrow" value="${esc(textState.eyebrow)}"></label><label>Main title<input data-text-field="mainTitle" value="${esc(textState.mainTitle)}"></label><label>Second line<input data-text-field="secondTitle" value="${esc(textState.secondTitle)}"></label><label>Player name<input data-text-field="playerName" value="${esc(textState.playerName)}"></label><label>Jersey #<input data-text-field="jerseyNumber" value="${esc(textState.jerseyNumber)}"></label><label class="wide">Week / season line<input data-text-field="weekLabel" value="${esc(textState.weekLabel)}"></label><label class="wide">Tagline<input data-text-field="tagline" value="${esc(textState.tagline)}"></label><label>Website<input data-text-field="website" value="${esc(textState.website)}"></label><label>Social<input data-text-field="social" value="${esc(textState.social)}"></label><label class="wide">Small footer text<input data-text-field="smallText" value="${esc(textState.smallText)}"></label><label>Signature<select id="jd-signature-mode"><option value="off" ${signatureMode==='off'?'selected':''}>Off</option><option value="stylized" ${signatureMode==='stylized'?'selected':''}>Stylized player signature</option><option value="upload" ${signatureMode==='upload'?'selected':''}>Uploaded real signature</option></select></label><span></span><label>Signature first name<input data-text-field="signatureFirst" value="${esc(textState.signatureFirst||'')}"></label><label>Signature last name<input data-text-field="signatureLast" value="${esc(textState.signatureLast||'')}"></label><label class="wide jd-signature-upload">Upload real signature PNG<input id="jd-signature-upload" type="file" accept="image/png,image/webp"></label></div><div class="jd-signature-adjust"><div class="jd-section-title"><div><h3>Signature placement</h3><p>Stack the first name above the last name and adjust how tightly they connect.</p></div><button type="button" id="jd-reset-signature">Reset signature</button></div><div class="jd-signature-slider-grid"><div class="jd-placement-row"><label>Size</label><input id="jd-signature-scale" type="range" min="0.65" max="1.55" step="0.01" value="${signatureScale}"><output id="jd-signature-scale-value">${Math.round(signatureScale*100)}%</output></div><div class="jd-placement-row"><label>Name gap</label><input id="jd-signature-gap" type="range" min="-45" max="70" step="1" value="${signatureGap}"><output id="jd-signature-gap-value">${signatureGap}</output></div><div class="jd-placement-row"><label>Last X</label><input id="jd-signature-last-x" type="range" min="-90" max="150" step="1" value="${signatureLastX}"><output id="jd-signature-last-x-value">${signatureLastX}</output></div><div class="jd-placement-row"><label>Rotate</label><input id="jd-signature-rotation" type="range" min="-16" max="16" step="1" value="${signatureRotation}"><output id="jd-signature-rotation-value">${signatureRotation}°</output></div><div class="jd-placement-row"><label># left/right</label><input id="jd-signature-number-x" type="range" min="-60" max="180" step="1" value="${signatureNumberX}"><output id="jd-signature-number-x-value">${signatureNumberX}</output></div><div class="jd-placement-row"><label># up/down</label><input id="jd-signature-number-y" type="range" min="70" max="200" step="1" value="${signatureNumberY}"><output id="jd-signature-number-y-value">${signatureNumberY}</output></div></div></div></div></details>`}
 
 
+  function fitDesktopPreview(){
+    const stage=$('.jd-graphic-stage-wrap'),shell=$('.jd-graphic-canvas-shell');
+    if(!stage||!shell||window.innerWidth<=900)return;
+    const overhead=stage.getBoundingClientRect().height-shell.getBoundingClientRect().height;
+    const top=parseFloat(getComputedStyle(stage).top)||78;
+    stage.style.setProperty('--jd-preview-canvas-height',`${Math.max(80,Math.floor(window.innerHeight-top-overhead-16))}px`);
+  }
+  window.addEventListener('resize',fitDesktopPreview);
+  function watchPreviewSize(){
+    previewResizeObserver?.disconnect();fitDesktopPreview();
+    if('ResizeObserver' in window){
+      previewResizeObserver=new ResizeObserver(fitDesktopPreview);
+      for(const el of $$('.jd-preview-placement,.jd-graphic-stage-head'))previewResizeObserver.observe(el);
+    }
+  }
+
   function renderControls(){
     const content=$('#section-content');if(!content)return;const seasonOpts=seasons().map(s=>`<option value="${esc(s.id)}" ${s.id===selectedSeasonId?'selected':''}>${esc(s.name)}</option>`).join('');
-    content.innerHTML=`<div class="jd-graphic-shell"><div class="jd-graphic-intro"><div><span class="eyebrow">SOCIAL GRAPHICS</span><h2>Player of the Week Generator</h2><p>Choose one of three Jersey Dodgers poster styles, then customize the player, 3–5 stats and text while the live preview stays visible.</p></div><span class="jd-graphic-size">1080 × 1350 · 4:5</span></div><div class="jd-graphic-layout">
+    content.innerHTML=`<div class="jd-graphic-shell"><div class="jd-graphic-intro"><div><span class="eyebrow">SOCIAL GRAPHICS</span><h2>Player of the Week Generator</h2><p>Choose one of three Jersey Dodgers poster styles, then customize the player, 3–5 stats and text while the live preview stays visible.</p></div><span class="jd-graphic-size">1080 × 1350 · 4:5 · V12.9</span></div><div class="jd-graphic-layout">
       <div class="jd-graphic-controls">
         <section><h3>1. Style, player & season</h3><label>Graphic style<select id="jd-graphic-style"><option value="editorial" ${graphicStyle==='editorial'?'selected':''}>Editorial / City</option><option value="electric" ${graphicStyle==='electric'?'selected':''}>Electric Blue</option><option value="classic" ${graphicStyle==='classic'?'selected':''}>Classic Dodgers</option></select></label><div class="jd-style-caption" id="jd-style-caption">${graphicStyle==='editorial'?'Dark editorial poster with gray skyline, bridge, baseball-field geometry, ghost portrait, signature and giant jersey number.':graphicStyle==='electric'?'High-energy blue lighting, electric edge effects and glowing stat cards.':'Cleaner Dodger-blue baseball look with player on the right and information on the left.'}</div><div class="jd-graphic-field-grid"><label>Season<select id="jd-graphic-season">${seasonOpts}</select></label><label>Stat set<select id="jd-graphic-phase"><option value="regular" ${phase==='regular'?'selected':''}>Regular season</option><option value="playoffs" ${phase==='playoffs'?'selected':''}>Playoffs</option></select></label></div><label>Player<select id="jd-graphic-player">${playerOptions()}</select></label></section>
         <section><h3>2. Player photo & treatment</h3><div class="jd-graphic-photo-row"><button class="button" id="jd-use-profile-photo" type="button">Use profile photo</button><label class="button" for="jd-graphic-upload-photo">Upload different photo</label><input id="jd-graphic-upload-photo" type="file" accept="image/*"></div><div class="jd-graphic-photo-preview" id="jd-graphic-photo-preview"></div><div class="jd-bg-actions"><label class="jd-bg-toggle"><input id="jd-auto-remove-bg" type="checkbox" checked>Remove background when generating</label><button type="button" id="jd-remove-bg">Remove with PhotoRoom</button></div><div class="jd-graphic-field-grid"><label>Edge treatment<select id="jd-edge-treatment"><option value="none" ${edgeTreatment==='none'?'selected':''}>None</option><option value="stroke" ${edgeTreatment==='stroke'?'selected':''}>Electric blue stroke</option><option value="energy" ${edgeTreatment==='energy'?'selected':''}>Blue energy</option></select></label><label>Photo grade<select id="jd-player-grade"><option value="dramatic" ${playerGrade==='dramatic'?'selected':''}>Dramatic</option><option value="high" ${playerGrade==='high'?'selected':''}>High contrast</option><option value="clean" ${playerGrade==='clean'?'selected':''}>Clean / natural</option></select></label></div><div id="jd-bg-status" class="jd-bg-status">High-quality removal uses PhotoRoom securely through the Jersey Dodgers server. Your API key never appears in the browser. The photo itself is sent to PhotoRoom for processing.</div></section>
@@ -377,7 +459,7 @@
       </div>
       <div class="jd-graphic-stage-wrap"><div class="jd-graphic-stage-head"><strong>LIVE POST PREVIEW</strong><span id="jd-preview-style-name">${graphicStyle==='editorial'?'EDITORIAL / CITY':graphicStyle==='electric'?'ELECTRIC BLUE':'CLASSIC DODGERS'} · 1080 × 1350</span></div><div class="jd-graphic-canvas-shell"><canvas id="jd-potw-canvas" width="1080" height="1350" aria-label="Player of the Week graphic preview"></canvas></div><div class="jd-preview-placement"><strong>Player placement</strong><div class="jd-placement-row"><label>Size</label><input id="jd-player-scale" type="range" min="0.60" max="1.75" step="0.01" value="${playerScale}"><output id="jd-player-scale-value">${Math.round(playerScale*100)}%</output></div><div class="jd-placement-row"><label>Left / right</label><input id="jd-player-x" type="range" min="-280" max="280" step="1" value="${playerX}"><output id="jd-player-x-value">${playerX}</output></div><div class="jd-placement-row"><label>Up / down</label><input id="jd-player-y" type="range" min="-220" max="180" step="1" value="${playerY}"><output id="jd-player-y-value">${playerY}</output></div><button type="button" id="jd-reset-placement">Reset this style placement</button><small>You can also drag the player directly on the preview. The logo is below the player; stats, title and footer stay above him.</small></div></div>
     </div></div>`;
-    bindControls();renderStatRows();paintPhotoPreview();renderPoster();
+    bindControls();renderStatRows();paintPhotoPreview();renderPoster();watchPreviewSize();
   }
 
   function bindControls(){
@@ -410,7 +492,7 @@
   }
 
   async function openGenerator(){
-    active=true;document.body.classList.remove('admin-menu-open');$('#admin-nav')?.classList.remove('open');$('#admin-menu-toggle')?.setAttribute('aria-expanded','false');$$('#admin-nav [data-section],#jd-staff-nav,#jd-graphic-nav').forEach(b=>b.classList.remove('active'));$('#jd-graphic-nav')?.classList.add('active');
+    active=true;document.body.classList.add('jd-graphic-active');document.body.classList.remove('admin-menu-open');$('#admin-nav')?.classList.remove('open');$('#admin-menu-toggle')?.setAttribute('aria-expanded','false');$$('#admin-nav [data-section],#jd-staff-nav,#jd-graphic-nav').forEach(b=>b.classList.remove('active'));$('#jd-graphic-nav')?.classList.add('active');
     const saveState=$('#save-state'),saveButton=$('#save-all');if(saveState)saveState.hidden=true;if(saveButton)saveButton.hidden=true;const heading=$('.admin-heading h1');if(heading)heading.textContent='Graphic Generator';const help=$('.admin-help');if(help)help.textContent='Build a 1080×1350 Player of the Week graphic with three Jersey Dodgers poster styles and a live preview.';
     try{const payload=await api('/api/admin/content');data=payload.data||payload;selectedSeasonId=selectedSeasonId&&data.seasons.some(s=>s.id===selectedSeasonId)?selectedSeasonId:currentSeason();const ps=rosterPlayers();selectedPlayerId=ps.some(p=>String(p.id)===String(selectedPlayerId))?selectedPlayerId:(ps[0]?.id||'');resetStyleStates();resetStats();resetText();await loadLogos();try{await document.fonts?.load?.(`72px ${SIGNATURE_FONT}`);await document.fonts?.ready}catch{}renderControls();await useProfilePhoto()}catch(e){setStatus(e.message,true)}
   }
@@ -419,6 +501,6 @@
   async function install(){
     const nav=$('#admin-nav');if(!nav||installing)return;installing=true;try{access=await api('/api/admin/access');graphicNavButtons(nav).forEach(n=>n.remove());if(!access.media)return;const b=document.createElement('button');b.id='jd-graphic-nav';b.type='button';b.textContent='Graphic Generator';b.addEventListener('click',openGenerator);const staff=$('#jd-staff-nav'),mobile=nav.querySelector('.admin-mobile-site');nav.insertBefore(b,staff||mobile||null);if(active)b.classList.add('active')}catch{}finally{installing=false}
   }
-  document.addEventListener('click',e=>{if(e.target.closest('[data-section],#jd-staff-nav')){active=false;$$('#jd-graphic-nav').forEach(n=>n.classList.remove('active'))}});
+  document.addEventListener('click',e=>{if(e.target.closest('[data-section],#jd-staff-nav')){active=false;document.body.classList.remove('jd-graphic-active');$$('#jd-graphic-nav').forEach(n=>n.classList.remove('active'))}});
   const observer=new MutationObserver(()=>{const nav=$('#admin-nav');if(nav&&graphicNavButtons(nav).length!==1)install()});observer.observe(document.documentElement,{childList:true,subtree:true});[250,600,1200,2200,4000].forEach(t=>setTimeout(install,t));
 })();

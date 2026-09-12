@@ -65,3 +65,23 @@
   .jd-preview-placement{position:relative!important}
 }
 
+
+/* V12.9: let the document scroll, so the desktop preview follows the editor. */
+@media (min-width:901px){
+  html:has(body.jd-graphic-active),body.jd-graphic-active{overflow-x:clip!important;overflow-y:visible!important}
+  body.jd-graphic-active #admin-root,
+  body.jd-graphic-active .admin-layout,
+  body.jd-graphic-active .admin-work,
+  body.jd-graphic-active #section-content{overflow:visible!important}
+  .jd-graphic-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .jd-graphic-controls,.jd-graphic-stage-wrap{min-width:0;box-sizing:border-box}
+  .jd-graphic-canvas-shell{
+    min-width:0!important;
+    width:min(100%,540px,calc(var(--jd-preview-canvas-height,calc(100vh - 470px))*.8))!important;
+    width:min(100%,540px,calc(var(--jd-preview-canvas-height,calc(100dvh - 470px))*.8))!important;
+  }
+  .jd-preview-placement{box-sizing:border-box;max-width:100%}
+}
+@media (min-width:901px) and (max-height:540px){
+  .jd-graphic-stage-wrap{position:static!important}
+}
