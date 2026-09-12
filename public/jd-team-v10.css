@@ -1,0 +1,461 @@
+
+/* V9: Season-based Players / jersey management */
+.jd-players-toolbar{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.jd-player-season-picker{margin-left:auto;display:grid;gap:5px;color:#8fa0b4;font-size:10px}
+.jd-player-season-picker select{min-width:190px}
+.jd-player-tools,.jd-team-actions{position:relative}
+.jd-player-tools>summary,.jd-team-actions>summary{list-style:none;cursor:pointer;border:1px solid #41536b;background:#121c2a;border-radius:5px;padding:10px 13px;color:#eef5fd;font-size:11px;font-weight:800}
+.jd-player-tools>summary::-webkit-details-marker,.jd-team-actions>summary::-webkit-details-marker{display:none}
+.jd-player-tools>div,.jd-team-actions>div{position:absolute;z-index:50;top:calc(100% + 6px);right:0;width:225px;padding:6px;border:1px solid #43546c;border-radius:7px;background:#0b121c;box-shadow:0 16px 36px #000b}
+.jd-player-tools button,.jd-team-actions button,.jd-team-actions a{display:block;width:100%;border:0;background:transparent;color:#dce8f6;text-align:left;padding:10px;border-radius:4px;font-size:11px}
+.jd-player-tools button:hover,.jd-team-actions button:hover,.jd-team-actions a:hover{background:#172539;color:#fff}
+
+.jd-season-roster-summary{display:flex;align-items:center;justify-content:space-between;gap:22px;margin-bottom:12px;padding:18px;border-left:4px solid #168bff;background:linear-gradient(110deg,#101b29,#0d141d)}
+.jd-season-roster-summary>div{display:grid;grid-template-columns:auto auto;align-items:end;gap:2px 12px}
+.jd-season-roster-summary .eyebrow{grid-column:1/-1}
+.jd-season-roster-summary strong{font:italic 42px/.9 Impact,'Arial Narrow',sans-serif;color:#9dc8ff}
+.jd-season-roster-summary small{color:#8ea0b5;padding-bottom:4px}
+.jd-season-roster-summary p{max-width:580px;font-size:11px}
+
+.jd-season-player-list{display:grid;gap:7px}
+.jd-season-player-row{display:grid;grid-template-columns:48px 58px minmax(0,1fr) auto;align-items:center;gap:12px;min-height:68px;padding:9px 11px;border:1px solid #2e3c50;background:#101824}
+.jd-season-player-row.is-removed{opacity:.58;border-style:dashed}
+.jd-season-player-thumb{width:46px;height:50px;overflow:hidden;display:grid;place-items:center;background:linear-gradient(120deg,#103a65,#101d30)}
+.jd-season-player-thumb img{width:100%;height:100%;object-fit:cover}
+.jd-season-player-thumb span{font:italic 23px Impact,sans-serif;color:#9dc8ff}
+.jd-season-player-number{font:italic 26px Impact,'Arial Narrow',sans-serif;color:#9dc8ff}
+.jd-season-player-copy{display:grid;min-width:0}
+.jd-season-player-copy strong{color:#fff;font-size:14px}
+.jd-season-player-copy span{color:#899bb1;font-size:10px}
+.jd-empty-season-roster{padding:36px;text-align:center;border:1px dashed #3c4b5e;background:#0e151f}
+.jd-empty-season-roster strong{display:block;color:#fff;font-size:18px}
+.jd-empty-season-roster p{margin-top:7px;font-size:12px}
+
+.jd-player-editor-heading h2,.jd-number-checker-heading h2{margin:8px 0 9px}
+.jd-existing-profile{display:grid;gap:7px;margin:20px 0 14px}
+.jd-player-photo-editor{display:grid!important;grid-template-columns:105px 1fr;gap:15px;align-items:center;padding:14px;border:1px solid #35465b;background:#0d1621}
+.jd-player-photo-preview{width:96px;aspect-ratio:4/5;overflow:hidden;display:grid;place-items:center;background:linear-gradient(120deg,#103a65,#101d30);color:#9dc8ff;font-size:9px;font-weight:900}
+.jd-player-photo-preview img{width:100%;height:100%;object-fit:cover}
+.jd-player-photo-editor>div:last-of-type{display:grid;gap:7px}
+.jd-player-photo-editor p{font-size:10px}
+.jd-player-photo-editor input[type=file]{width:100%}
+.jd-player-photo-editor button{width:max-content;background:none;border:0;padding:0;color:#8bbfff}
+.jd-season-roster-fields{display:grid!important;grid-template-columns:1fr 1fr;gap:12px;padding:16px;border-top:3px solid #168bff;background:#111b29}
+.jd-season-roster-fields>div:first-child,.jd-season-roster-fields>#jd-v9-number-live{grid-column:1/-1}
+.jd-season-roster-fields h3{margin-top:4px}
+
+.jd-number-state{display:grid;gap:3px;padding:10px 12px;border-radius:5px;border:1px solid #45566b;background:#111a25}
+.jd-number-state strong{font-size:12px;letter-spacing:.04em}
+.jd-number-state span{font-size:9px}
+.jd-number-state.available{background:#10291e;border-color:#2c8a5c;color:#83efb5}
+.jd-number-state.reserved{background:#31171b;border-color:#b94d5a;color:#ff9ba7}
+.jd-number-state.owned{background:#12243c;border-color:#3577bd;color:#96caff}
+.jd-number-state.neutral{color:#96a7bb}
+.jd-number-history{display:grid;gap:5px;margin-top:6px}
+.jd-number-history-row{display:grid;grid-template-columns:1fr auto;gap:1px 12px;padding:8px 10px;border:1px solid #2d3c4e;background:#0d141e}
+.jd-number-history-row strong{color:#fff;font-size:10px}
+.jd-number-history-row span{color:#9aacbf;font-size:9px;text-align:right}
+.jd-number-history-row small{grid-column:1/-1;color:#67798e;font-size:8px}
+.jd-number-check-input{display:grid;gap:7px;margin:18px 0 10px}
+
+.jd-import-preset{display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid #40536b;background:#111c2a}
+.jd-import-preset span{color:#8799ae;font-size:9px}
+.jd-gc-player-review{max-height:410px;overflow:auto;display:grid;gap:5px;margin-top:12px;padding-right:3px}
+.jd-gc-player-line{display:grid;grid-template-columns:48px minmax(0,1fr) auto minmax(170px,.8fr);align-items:center;gap:9px;padding:9px;border:1px solid #34455b;background:#101925}
+.jd-gc-player-line>b{font:italic 20px Impact,sans-serif;color:#9dc8ff}
+.jd-gc-player-line>span{display:grid}
+.jd-gc-player-line>span strong{color:#fff;font-size:11px}
+.jd-gc-player-line>span small{color:#7f91a6;font-size:8px}
+.jd-gc-player-line>em{font-size:8px;font-style:normal;font-weight:900;letter-spacing:.06em}
+.jd-gc-player-line.matched>em{color:#72e5a7}
+.jd-gc-player-line.new>em{color:#8bc5ff}
+.jd-gc-player-line.review>em{color:#ffc967}
+
+.jd-supplied-history-list{display:grid;gap:10px;margin:20px 0}
+.jd-supplied-history-list button{display:flex;align-items:center;justify-content:space-between;padding:18px;border:1px solid #3d5068;background:#111b28;color:#fff;text-align:left}
+.jd-supplied-history-list button:hover{border-color:#168bff}
+.jd-supplied-history-list span{color:#94a7bc;font-size:10px}
+
+.jd-column-mapping{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.jd-column-mapping label{display:grid;gap:5px;color:#9cadc1;font-size:10px}
+.jd-jersey-import-preview{display:grid;gap:5px;max-height:280px;overflow:auto;padding:12px;border:1px solid #34465b;background:#0d1621}
+.jd-jersey-import-preview>strong{color:#fff;margin-bottom:5px}
+.jd-jersey-import-preview span{color:#9badc0;font-size:10px}
+.jd-jersey-import-preview b{color:#9dc8ff}
+
+@media(max-width:700px){
+  .jd-player-season-picker{order:-1;width:100%;margin-left:0}
+  .jd-player-season-picker select{width:100%}
+  .jd-season-roster-summary{align-items:flex-start;flex-direction:column}
+  .jd-season-player-row{grid-template-columns:40px 42px minmax(0,1fr) auto;gap:7px;padding:8px}
+  .jd-season-player-thumb{width:38px;height:44px}
+  .jd-season-player-number{font-size:20px}
+  .jd-season-player-copy strong{font-size:12px}
+  .jd-team-actions>summary{padding:8px;font-size:9px}
+  .jd-team-actions>div{width:190px}
+  .jd-player-photo-editor{grid-template-columns:78px 1fr}
+  .jd-player-photo-preview{width:72px}
+  .jd-season-roster-fields,.jd-column-mapping{grid-template-columns:1fr}
+  .jd-season-roster-fields>div:first-child,.jd-season-roster-fields>#jd-v9-number-live{grid-column:1}
+  .jd-gc-player-line{grid-template-columns:38px 1fr auto}
+  .jd-gc-player-line select{grid-column:1/-1}
+  .jd-number-history-row{grid-template-columns:1fr}
+  .jd-number-history-row span{text-align:left}
+}
+
+
+/* ======================================================
+   V10 — PLAYER TOOLBAR ALIGNMENT
+   ====================================================== */
+
+.jd-players-toolbar{
+  align-items:center!important;
+}
+
+.jd-players-toolbar > .button,
+.jd-player-tools > summary{
+  box-sizing:border-box!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  height:42px!important;
+  min-height:42px!important;
+  margin:0!important;
+  padding:0 15px!important;
+  line-height:1!important;
+  text-align:center!important;
+}
+
+.jd-player-tools{
+  display:inline-flex!important;
+  align-items:center!important;
+  align-self:center!important;
+  margin:0!important;
+}
+
+.jd-player-tools > summary{
+  min-width:88px;
+}
+
+.jd-player-season-picker{
+  align-self:center!important;
+  margin-top:0!important;
+  margin-bottom:0!important;
+}
+
+/* ======================================================
+   V10 — HISTORICAL ROSTER LINK IMPORT
+   ====================================================== */
+
+.jd-roster-paste-fallback{
+  padding:11px 12px;
+  border:1px dashed #3d5068;
+  border-radius:6px;
+  background:#0d1621;
+}
+
+.jd-roster-paste-fallback>summary{
+  cursor:pointer;
+  color:#9fb0c4;
+  font-size:10px;
+  font-weight:800;
+}
+
+.jd-roster-paste-fallback textarea{
+  width:100%;
+  margin-top:10px;
+  resize:vertical;
+}
+
+.jd-link-import-head{
+  display:flex;
+  align-items:end;
+  justify-content:space-between;
+  gap:16px;
+  margin:14px 0 12px;
+  padding:14px;
+  border-left:3px solid #168bff;
+  background:#101925;
+}
+
+.jd-link-import-head h3{
+  margin:4px 0 0;
+}
+
+.jd-link-import-head small{
+  color:#8799ad;
+  font-size:9px;
+}
+
+.jd-link-import-head label{
+  display:grid;
+  gap:5px;
+  min-width:190px;
+  color:#9bacbf;
+  font-size:9px;
+}
+
+.jd-link-source{
+  display:grid;
+  gap:4px;
+  margin-top:10px;
+  padding:10px 12px;
+  border:1px solid #314157;
+  background:#0c141e;
+  overflow-wrap:anywhere;
+}
+
+.jd-link-source strong{
+  color:#fff;
+  font-size:9px;
+  letter-spacing:.08em;
+}
+
+.jd-link-source span{
+  color:#8294aa;
+  font-size:9px;
+}
+
+/* ======================================================
+   V10 — STAFF ACCESS
+   ====================================================== */
+
+#jd-staff-nav.active{
+  color:#ff8a3d!important;
+  background:#111c2a!important;
+}
+
+.jd-staff-access{
+  display:grid;
+  gap:14px;
+}
+
+.jd-staff-intro{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  padding:18px;
+  border:1px solid #2e3d51;
+  background:linear-gradient(120deg,#101a28,#0c141e);
+}
+
+.jd-staff-intro h2{
+  margin:5px 0 7px;
+}
+
+.jd-staff-intro p{
+  max-width:680px;
+  font-size:11px;
+}
+
+.jd-invite-staff-form{
+  display:grid;
+  grid-template-columns:1fr 1fr 180px;
+  gap:12px;
+  align-items:end;
+  padding:16px;
+  border:1px solid #40546d;
+  background:#111b29;
+}
+
+.jd-invite-staff-form[hidden]{
+  display:none!important;
+}
+
+.jd-invite-staff-form label{
+  display:grid;
+  gap:5px;
+  color:#9cadc1;
+  font-size:10px;
+}
+
+.jd-invite-actions{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  grid-column:1/-1;
+}
+
+#jd-staff-form-message{
+  grid-column:1/-1;
+  margin:0;
+  color:#9db1c7;
+  font-size:10px;
+}
+
+.jd-staff-list{
+  display:grid;
+  gap:8px;
+}
+
+.jd-staff-card{
+  display:grid;
+  grid-template-columns:48px minmax(0,1fr) 180px auto;
+  align-items:center;
+  gap:12px;
+  min-height:72px;
+  padding:11px 12px;
+  border:1px solid #304156;
+  background:#0f1824;
+}
+
+.jd-staff-card.is-owner{
+  border-left:3px solid #ff8a3d;
+}
+
+.jd-staff-avatar{
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#1b2c42;
+  color:#d9e8f9;
+  font-size:16px;
+  font-weight:900;
+}
+
+.jd-staff-copy{
+  display:grid;
+  min-width:0;
+}
+
+.jd-staff-copy strong{
+  color:#fff;
+  font-size:12px;
+}
+
+.jd-staff-copy span{
+  color:#9aacbf;
+  font-size:10px;
+  overflow-wrap:anywhere;
+}
+
+.jd-staff-copy small{
+  color:#64778d;
+  font-size:8px;
+}
+
+.jd-staff-role select{
+  width:100%;
+}
+
+.jd-role-pill{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:0 10px;
+  border-radius:999px;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+
+.jd-role-pill.owner{
+  color:#ffc19a;
+  background:#3c2618;
+  border:1px solid #7e4b2a;
+}
+
+.jd-staff-actions{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.jd-staff-actions button{
+  padding:7px 9px;
+  border:1px solid #43566e;
+  background:#121d2b;
+  color:#dce7f5;
+  border-radius:4px;
+  font-size:9px;
+}
+
+.jd-staff-actions button.danger{
+  color:#ff9ca6;
+  border-color:#7e3942;
+}
+
+.jd-staff-security-note{
+  padding:14px;
+  border:1px solid #2f4055;
+  background:#0d151f;
+}
+
+.jd-staff-security-note strong{
+  display:block;
+  color:#fff;
+  margin-bottom:4px;
+}
+
+.jd-staff-security-note p{
+  font-size:10px;
+  margin:0;
+}
+
+.jd-staff-empty{
+  padding:24px;
+  text-align:center;
+  border:1px dashed #3b4b60;
+  color:#8c9db1;
+}
+
+/* ======================================================
+   V10 — MOBILE ADMIN
+   ====================================================== */
+
+@media(max-width:700px){
+  .jd-players-toolbar{
+    align-items:center!important;
+  }
+
+  .jd-players-toolbar > .button,
+  .jd-player-tools > summary{
+    height:40px!important;
+    min-height:40px!important;
+  }
+
+  .jd-player-tools{
+    align-self:center!important;
+  }
+
+  .jd-link-import-head{
+    align-items:stretch;
+    flex-direction:column;
+  }
+
+  .jd-link-import-head label{
+    min-width:0;
+  }
+
+  .jd-staff-intro{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .jd-invite-staff-form{
+    grid-template-columns:1fr;
+  }
+
+  .jd-invite-actions,
+  #jd-staff-form-message{
+    grid-column:1;
+  }
+
+  .jd-staff-card{
+    grid-template-columns:40px minmax(0,1fr);
+  }
+
+  .jd-staff-role,
+  .jd-staff-actions{
+    grid-column:1/-1;
+  }
+
+  .jd-staff-actions{
+    justify-content:flex-start;
+  }
+}

@@ -1,6 +1,14 @@
 (() => {
   'use strict';
 
+  // Netlify Identity email links normally land on the project root.
+  // Send admin invite/recovery tokens to the Admin page, whose core auth
+  // flow already handles invite/recovery password creation.
+  if (/(?:invite_token|recovery_token)=/i.test(location.hash || '')) {
+    location.replace(`/admin.html${location.hash}`);
+    return;
+  }
+
   const FRAME_RE = /\[\[JD_FRAME:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
   const VIDEO_FRAME_RE = /\[\[JD_VFRAME:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;
   const OLD_FOCUS_RE = /\[\[JD_FOCUS:\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\]\]/gi;

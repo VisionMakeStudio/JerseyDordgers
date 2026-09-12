@@ -1,29 +1,73 @@
 import {getStore,getDeployStore} from '@netlify/blobs';
 import {getUser,verifyRequestOrigin} from '@netlify/identity';
-import {contentSchema,canEdit,publicContent} from '../../src/schema.mjs';
+import {contentSchema,publicContent} from '../../src/schema.mjs';
 import seed from '../../seed.json';
+
+const rolesFor=(user:any)=>[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.appMetadata?.roles)?user.appMetadata.roles:[]),...(user?.role?[user.role]:[])];
+const accessFor=(user:any)=>{
+ const roles=rolesFor(user);
+ const ownerEmail=(Netlify.env.get('DODGERS_ADMIN_EMAIL')||'').toLowerCase();
+ const owner=Boolean(user?.id&&((user.email||'').toLowerCase()===ownerEmail||roles.includes('dodgers-owner')));
+ const coach=owner||roles.includes('dodgers-coach');
+ const media=coach||roles.includes('dodgers-media');
+ return {owner,coach,media,roles};
+};
+const same=(a:any,b:any)=>JSON.stringify(a)===JSON.stringify(b);
+
 export default async(req,context)=>{
  const headers={'Cache-Control':'no-store','Content-Type':'application/json'};
- const respond=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
+ const respond=(body:any,status=200)=>new Response(JSON.stringify(body),{status,headers});
  try{
   const store=context.deploy.context==='production'?getStore({name:'dodgers-content',consistency:'strong'}):getDeployStore('dodgers-content');
   const path=new URL(req.url).pathname;
-  if(req.method==='GET'&&path==='/api/content'){const record=await store.get('published',{type:'json'});return respond(publicContent(record?.data||seed))}
+
+  if(req.method==='GET'&&path==='/api/content'){
+   const record=await store.get('published',{type:'json'});
+   return respond(publicContent(record?.data||seed));
+  }
+
   const user=await getUser();
-  if(!canEdit(user,Netlify.env.get('DODGERS_ADMIN_EMAIL')))return respond({error:'Administrator sign-in required.'},403);
-  if(req.method==='GET'){const record=await store.get('published',{type:'json'});return respond(record?{...record,data:contentSchema.parse(record.data)}:{revision:'initial',data:contentSchema.parse(seed)})}
+  const access=accessFor(user);
+  if(!access.media)return respond({error:'Administrator sign-in required.'},403);
+
+  if(req.method==='GET'){
+   const record=await store.get('published',{type:'json'});
+   return respond(record?{...record,data:contentSchema.parse(record.data)}:{revision:'initial',data:contentSchema.parse(seed)});
+  }
+
   if(req.method!=='PUT')return respond({error:'Method not allowed'},405);
   verifyRequestOrigin(req);
+
   if(Number(req.headers.get('content-length')||0)>4000000)return respond({error:'Content too large'},413);
-  const raw=await req.text();if(raw.length>4000000)return respond({error:'Content too large'},413);
-  const input=JSON.parse(raw);const result=contentSchema.safeParse(input.data);
+  const raw=await req.text();
+  if(raw.length>4000000)return respond({error:'Content too large'},413);
+
+  const input=JSON.parse(raw);
+  const result=contentSchema.safeParse(input.data);
   if(!result.success)return respond({error:result.error.issues.map(i=>i.path.join('.')+': '+i.message).join('; ')},400);
+
   const before=await store.get('published',{type:'json'});
   if(input.revision!==(before?.revision||'initial'))return respond({error:'Another update was saved. Reload before saving your changes.'},409);
+
+  // Media staff can work only in media/watch-follow sections.
+  // Coach/Admin and Owner keep full team-management access.
+  if(!access.coach){
+   const previous=contentSchema.parse(before?.data||seed);
+   for(const key of Object.keys(result.data)){
+    if(key==='media'||key==='channels')continue;
+    if(!same((previous as any)[key],(result.data as any)[key])){
+     return respond({error:'Your Media access can only change photos, videos and Watch & Follow links.'},403);
+    }
+   }
+  }
+
   if(before)await store.setJSON('history/'+before.revision,before);
   const record={revision:crypto.randomUUID(),updatedAt:new Date().toISOString(),data:result.data};
   await store.setJSON('published',record);
   return respond(record);
- }catch(e){return respond({error:e?.status===403?'Request origin not allowed.':'Unable to complete the request. Please try again.'},e?.status===403?403:500)}
+ }catch(e:any){
+  return respond({error:e?.status===403?'Request origin not allowed.':'Unable to complete the request. Please try again.'},e?.status===403?403:500);
+ }
 };
+
 export const config={path:['/api/content','/api/admin/content']};

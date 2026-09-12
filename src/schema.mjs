@@ -14,7 +14,7 @@ export const schemas={
  teams:z.object({id,name:short.min(1),abbreviation:z.string().max(5),logo:image}),
  games:z.object({id,season:id,opponent:id,field:id,date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),time:z.string().regex(/^\d{2}:\d{2}$/),timezone:z.enum(['America/New_York']),home:z.boolean(),status:z.enum(['scheduled','live','final','postponed','cancelled']),statusReason:short.default(''),rescheduledDate:z.string().refine(v=>!v||/^\d{4}-\d{2}-\d{2}$/.test(v),'Use a valid new date').default(''),rescheduledTime:z.string().refine(v=>!v||/^\d{2}:\d{2}$/.test(v),'Use a valid new time').default(''),ourScore:z.number().int().min(0).max(200).nullable(),theirScore:z.number().int().min(0).max(200).nullable(),gameLink:link,recap:text,weather:short}).refine(g=>g.status!=='final'||(g.ourScore!==null&&g.theirScore!==null),'Final games need both scores').refine(g=>!g.rescheduledTime||g.rescheduledDate,'Choose a new date when adding a new time'),
  players:z.object({id,name:short.min(1),number:z.string().max(10),position:short,bats:short,throws:short,bio:text,photo:image,active:z.boolean()}),
- rosters:z.object({id,season:id,player:id,number:z.string().max(10),position:short,active:z.boolean().default(true)}),
+ rosters:z.object({id,season:id,player:id,number:z.string().max(10),position:short,active:z.boolean().default(true),source:link.default('')}),
  jerseyRecords:z.object({id,player:optionalId.default(''),playerName:short.min(1),number:z.string().max(10),season:optionalId.default(''),year:z.string().max(4).refine(v=>!v||/^20\d{2}$/.test(v),'Use a four-digit year').default(''),jerseySize:short.default(''),source:short.default('Jersey history'),notes:text.default('')}),
  stats:z.object({id,season:id,player:id,bat:stats,pitch:stats,fielding:stats,source:short}),
  standings:z.object({id,season:id,team:id,w:z.number().int().nonnegative(),l:z.number().int().nonnegative(),t:z.number().int().nonnegative(),pct:metric,gb:metric,rs:z.number().int().nonnegative(),ra:z.number().int().nonnegative(),streak:short,home:short,away:short,order:z.number().int().nonnegative(),source:short}),
@@ -58,9 +58,12 @@ export const contentSchema=z.object({
  const statKeys=d.stats.map(s=>s.season+':'+s.player);if(new Set(statKeys).size!==statKeys.length)fail('Only one stats entry per player and season is allowed');
  const rosterKeys=d.rosters.map(r=>r.season+':'+r.player);if(new Set(rosterKeys).size!==rosterKeys.length)fail('Only one roster entry per player and season is allowed');
 });
-export function canEdit(user,adminEmail){return Boolean(user?.id&&adminEmail&&user.email?.toLowerCase()===adminEmail.toLowerCase())}
+export function canEdit(user,adminEmail){
+ const roles=[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.appMetadata?.roles)?user.appMetadata.roles:[]),...(user?.role?[user.role]:[])];
+ return Boolean(user?.id&&((adminEmail&&user.email?.toLowerCase()===adminEmail.toLowerCase())||roles.some(r=>['dodgers-owner','dodgers-coach','dodgers-media'].includes(r))));
+}
 export function publicContent(data){
  const normalized=contentSchema.parse(data);
  const {jerseyRecords,...safe}=normalized;
- return {...safe,rosters:normalized.rosters.filter(x=>x.active),media:normalized.media.filter(x=>x.published),channels:normalized.channels.filter(x=>x.active),sponsors:normalized.sponsors.filter(x=>x.active),spotlights:normalized.spotlights.filter(x=>x.published)};
+ return {...safe,rosters:normalized.rosters.filter(x=>x.active).map(({source,...roster})=>roster),media:normalized.media.filter(x=>x.published),channels:normalized.channels.filter(x=>x.active),sponsors:normalized.sponsors.filter(x=>x.active),spotlights:normalized.spotlights.filter(x=>x.published)};
 }
