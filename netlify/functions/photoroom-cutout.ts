@@ -1,6 +1,6 @@
 import {getUser, admin, verifyRequestOrigin} from '@netlify/identity';
 
-const VERSION = '12.10';
+const VERSION = '12.11';
 const ENDPOINT = 'https://image-api.photoroom.com/v2/edit';
 // Leave room for Netlify's 6 MB payload envelope and base64 expansion.
 const MAX_INPUT = 4_000_000;
@@ -85,6 +85,9 @@ export default async (req:Request) => {
 
     const apiKey = String(Netlify.env.get('PHOTOROOM_API_KEY') || '').trim();
     if (!apiKey) return error('PhotoRoom is not configured. Add PHOTOROOM_API_KEY to Netlify Functions environment variables and redeploy.',503);
+    if (apiKey.toLowerCase().startsWith('sandbox_')) {
+      return error('PhotoRoom sandbox mode always adds a watermark. Replace PHOTOROOM_API_KEY in Netlify with the Live API key from PhotoRoom, then redeploy.',503);
+    }
     const contentType = String(req.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
     if (!['image/jpeg','image/png','image/webp'].includes(contentType)) {
       return error('Use a JPEG, PNG or WebP player photo.',415);
