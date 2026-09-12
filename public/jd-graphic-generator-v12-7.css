@@ -1,0 +1,20 @@
+/* Jersey Dodgers V12.7 — desktop sticky preview reliability patch */
+@media (min-width:901px){
+  .jd-graphic-shell,
+  .jd-graphic-layout,
+  .jd-graphic-stage-wrap{overflow:visible!important}
+  .jd-graphic-layout{align-items:start!important}
+  .jd-graphic-stage-wrap{
+    position:sticky!important;
+    top:78px!important;
+    align-self:start!important;
+    height:max-content!important;
+    max-height:none!important;
+    overflow:visible!important;
+    scrollbar-width:auto!important;
+  }
+  .jd-graphic-canvas-shell{
+    width:min(100%,540px,calc((100vh - 340px)*.8))!important;
+  }
+  .jd-preview-placement{position:relative!important}
+}
