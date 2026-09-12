@@ -1,0 +1,24 @@
+/* Jersey Dodgers V12 — Player of the Week Graphic Generator */
+#jd-graphic-nav{position:relative}
+#jd-graphic-nav.active{color:#fff;background:#12345a;border-left-color:#168bff}
+.jd-graphic-shell{display:grid;gap:16px}
+.jd-graphic-intro{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;padding:18px;border-left:4px solid #168bff;background:linear-gradient(120deg,#101c2a,#0b1119)}
+.jd-graphic-intro h2{margin:3px 0 6px;color:#fff;font-size:22px}.jd-graphic-intro p{margin:0;max-width:680px;color:#90a4bb;font-size:10px;line-height:1.55}.jd-graphic-size{flex:0 0 auto;padding:8px 10px;border:1px solid #29445f;border-radius:5px;color:#9dc8ff;font-size:9px;font-weight:900;letter-spacing:.08em}
+.jd-graphic-layout{display:grid;grid-template-columns:minmax(300px,420px) minmax(360px,1fr);gap:16px;align-items:start}
+.jd-graphic-controls{display:grid;gap:12px;padding:15px;border:1px solid #25364a;background:#0d151f}
+.jd-graphic-controls>section{display:grid;gap:10px;padding-bottom:12px;border-bottom:1px solid #25364a}.jd-graphic-controls>section:last-child{border-bottom:0;padding-bottom:0}
+.jd-graphic-controls h3{margin:0;color:#fff;font-size:12px}.jd-graphic-controls p{margin:0;color:#8297ae;font-size:9px;line-height:1.45}
+.jd-graphic-field-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.jd-graphic-controls label{display:grid;gap:5px;color:#94a8bf;font-size:8px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}.jd-graphic-controls input,.jd-graphic-controls select{box-sizing:border-box;width:100%;min-width:0}
+.jd-graphic-photo-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.jd-graphic-photo-row .button{flex:1 1 145px}.jd-graphic-photo-row input[type=file]{display:none}
+.jd-graphic-photo-preview{display:flex;align-items:center;gap:10px;min-height:54px;padding:8px;border:1px solid #263b52;background:#0a111a}.jd-graphic-photo-preview img{width:48px;height:56px;object-fit:cover;border-radius:3px;background:#142941}.jd-graphic-photo-preview span{display:grid;gap:3px}.jd-graphic-photo-preview strong{color:#fff;font-size:10px}.jd-graphic-photo-preview small{color:#8195ab;font-size:8px}
+.jd-bg-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.jd-bg-toggle{display:flex!important;grid-template-columns:auto 1fr!important;align-items:center;gap:8px!important;flex:1 1 180px;text-transform:none!important;letter-spacing:0!important;font-size:9px!important}.jd-bg-toggle input{width:auto!important}.jd-bg-status{min-height:15px;color:#8ba1b8;font-size:9px}.jd-bg-status.busy{color:#9dc8ff}.jd-bg-status.good{color:#7bd9ad}.jd-bg-status.error{color:#ff9eaa}
+.jd-stat-row{display:grid;grid-template-columns:1.25fr .7fr 1fr;gap:7px}.jd-stat-row select,.jd-stat-row input{font-size:10px}.jd-stat-row .jd-stat-value{font-weight:900;color:#fff}.jd-stat-row .jd-stat-label{text-transform:uppercase}
+.jd-placement-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}.jd-placement-row input[type=range]{width:100%}.jd-placement-row output{min-width:38px;text-align:right;color:#9dc8ff;font-size:9px;font-weight:900}
+.jd-graphic-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.jd-graphic-actions .button{min-height:42px}.jd-graphic-actions .primary{grid-column:1/-1;background:#168bff;color:#fff}.jd-graphic-actions button:disabled{opacity:.45;cursor:not-allowed}
+.jd-graphic-stage-wrap{position:sticky;top:12px;display:grid;gap:10px;justify-items:center;padding:14px;border:1px solid #25374b;background:radial-gradient(circle at 50% 20%,#15263a,#090f16 72%)}
+.jd-graphic-stage-head{width:100%;display:flex;justify-content:space-between;gap:10px;align-items:center}.jd-graphic-stage-head strong{color:#fff;font-size:11px}.jd-graphic-stage-head span{color:#7f94ac;font-size:8px}.jd-graphic-canvas-shell{width:min(100%,540px);aspect-ratio:4/5;overflow:hidden;border:1px solid #34506d;background:#07101a;box-shadow:0 24px 60px #0009}
+#jd-potw-canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}#jd-potw-canvas.dragging{cursor:grabbing}
+.jd-graphic-help{width:min(100%,540px);display:flex;justify-content:space-between;gap:12px;color:#7d91a7;font-size:8px;line-height:1.4}.jd-graphic-help strong{color:#a9bdd3}
+.jd-generator-note{padding:10px 12px;border:1px solid #2b4057;background:#0b141f;color:#8ea4bb;font-size:9px;line-height:1.5}.jd-generator-note strong{color:#fff}
+@media(max-width:980px){.jd-graphic-layout{grid-template-columns:1fr}.jd-graphic-stage-wrap{position:static}.jd-graphic-controls{order:1}.jd-graphic-stage-wrap{order:2}}
+@media(max-width:560px){.jd-graphic-intro{flex-direction:column}.jd-graphic-field-grid{grid-template-columns:1fr}.jd-stat-row{grid-template-columns:1fr .7fr}.jd-stat-row .jd-stat-label{grid-column:1/-1}.jd-graphic-actions{grid-template-columns:1fr}.jd-graphic-actions .primary{grid-column:auto}.jd-graphic-stage-wrap{padding:8px}.jd-graphic-help{flex-direction:column;gap:4px}}
