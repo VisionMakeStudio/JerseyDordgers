@@ -1,13 +1,13 @@
 (() => {
   'use strict';
-  if (window.__jdGraphicGeneratorV129Loaded) return;
-  window.__jdGraphicGeneratorV129Loaded = true;
+  if (window.__jdGraphicGeneratorV1210Loaded) return;
+  window.__jdGraphicGeneratorV1210Loaded = true;
 
   const $=(s,r=document)=>r.querySelector(s);
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const CANVAS_W=1080,CANVAS_H=1350;
-  const GENERATOR_VERSION='12.9',MAX_TRANSFER_BYTES=4_000_000;
+  const GENERATOR_VERSION='12.10',MAX_TRANSFER_BYTES=4_000_000;
   const EDITORIAL_BACKGROUND='/assets/jd-editorial-city-v12-9.png';
   const SCRIPT_LOGO='/assets/jd-script-logo-official.png';
   const D_MARK='/assets/jd-d-mark-official.png';
@@ -181,12 +181,13 @@
     throw Error('Player photo is too large. Upload a smaller image.');
   }
   async function readCutoutResponse(response){
+    if(response.status===202)throw Error('The server started an asynchronous job instead of returning the cutout. Deploy the photoroom-cutout.ts function and reload Admin.');
     const type=String(response.headers.get('content-type')||'').toLowerCase();
     let body=null;
     if(type.includes('application/json')){try{body=await response.json()}catch{throw Error('The server returned incomplete image data. Reload Admin and try again.')}}
     if(!response.ok)throw Error(body?.error||`Background removal failed (HTTP ${response.status}). Sign in again or retry with a smaller photo.`);
     if(response.headers.get('X-JD-Generator-Version')!==GENERATOR_VERSION||body?.version!==GENERATOR_VERSION){
-      throw Error('The Admin page and background-removal function are different versions. Deploy all V12.9 patch files together, then reload Admin.');
+      throw Error('The Admin page and background-removal function are different versions. Deploy all V12.10 patch files together, then reload Admin.');
     }
     if(body.mimeType!=='image/png'||!Number.isInteger(body.byteLength)||body.byteLength<45||body.byteLength>MAX_TRANSFER_BYTES||typeof body.imageBase64!=='string'||body.imageBase64.length!==4*Math.ceil(body.byteLength/3)){
       throw Error('The server did not return a complete PNG. Reload Admin and try again.');
@@ -205,7 +206,7 @@
     if(!['image/jpeg','image/png','image/webp'].includes(input.type))throw Error('Upload a JPEG, PNG or WebP player photo.');
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),55_000);
     try{
-      const response=await fetch('/api/admin/remove-background',{
+      const response=await fetch('/api/admin/photoroom-cutout',{
         method:'POST',credentials:'same-origin',cache:'no-store',signal:controller.signal,
         headers:{'Content-Type':input.type,'Accept':'application/json','X-JD-Generator-Version':GENERATOR_VERSION},body:input
       });
@@ -449,7 +450,7 @@
 
   function renderControls(){
     const content=$('#section-content');if(!content)return;const seasonOpts=seasons().map(s=>`<option value="${esc(s.id)}" ${s.id===selectedSeasonId?'selected':''}>${esc(s.name)}</option>`).join('');
-    content.innerHTML=`<div class="jd-graphic-shell"><div class="jd-graphic-intro"><div><span class="eyebrow">SOCIAL GRAPHICS</span><h2>Player of the Week Generator</h2><p>Choose one of three Jersey Dodgers poster styles, then customize the player, 3–5 stats and text while the live preview stays visible.</p></div><span class="jd-graphic-size">1080 × 1350 · 4:5 · V12.9</span></div><div class="jd-graphic-layout">
+    content.innerHTML=`<div class="jd-graphic-shell"><div class="jd-graphic-intro"><div><span class="eyebrow">SOCIAL GRAPHICS</span><h2>Player of the Week Generator</h2><p>Choose one of three Jersey Dodgers poster styles, then customize the player, 3–5 stats and text while the live preview stays visible.</p></div><span class="jd-graphic-size">1080 × 1350 · 4:5 · V12.10</span></div><div class="jd-graphic-layout">
       <div class="jd-graphic-controls">
         <section><h3>1. Style, player & season</h3><label>Graphic style<select id="jd-graphic-style"><option value="editorial" ${graphicStyle==='editorial'?'selected':''}>Editorial / City</option><option value="electric" ${graphicStyle==='electric'?'selected':''}>Electric Blue</option><option value="classic" ${graphicStyle==='classic'?'selected':''}>Classic Dodgers</option></select></label><div class="jd-style-caption" id="jd-style-caption">${graphicStyle==='editorial'?'Dark editorial poster with gray skyline, bridge, baseball-field geometry, ghost portrait, signature and giant jersey number.':graphicStyle==='electric'?'High-energy blue lighting, electric edge effects and glowing stat cards.':'Cleaner Dodger-blue baseball look with player on the right and information on the left.'}</div><div class="jd-graphic-field-grid"><label>Season<select id="jd-graphic-season">${seasonOpts}</select></label><label>Stat set<select id="jd-graphic-phase"><option value="regular" ${phase==='regular'?'selected':''}>Regular season</option><option value="playoffs" ${phase==='playoffs'?'selected':''}>Playoffs</option></select></label></div><label>Player<select id="jd-graphic-player">${playerOptions()}</select></label></section>
         <section><h3>2. Player photo & treatment</h3><div class="jd-graphic-photo-row"><button class="button" id="jd-use-profile-photo" type="button">Use profile photo</button><label class="button" for="jd-graphic-upload-photo">Upload different photo</label><input id="jd-graphic-upload-photo" type="file" accept="image/*"></div><div class="jd-graphic-photo-preview" id="jd-graphic-photo-preview"></div><div class="jd-bg-actions"><label class="jd-bg-toggle"><input id="jd-auto-remove-bg" type="checkbox" checked>Remove background when generating</label><button type="button" id="jd-remove-bg">Remove with PhotoRoom</button></div><div class="jd-graphic-field-grid"><label>Edge treatment<select id="jd-edge-treatment"><option value="none" ${edgeTreatment==='none'?'selected':''}>None</option><option value="stroke" ${edgeTreatment==='stroke'?'selected':''}>Electric blue stroke</option><option value="energy" ${edgeTreatment==='energy'?'selected':''}>Blue energy</option></select></label><label>Photo grade<select id="jd-player-grade"><option value="dramatic" ${playerGrade==='dramatic'?'selected':''}>Dramatic</option><option value="high" ${playerGrade==='high'?'selected':''}>High contrast</option><option value="clean" ${playerGrade==='clean'?'selected':''}>Clean / natural</option></select></label></div><div id="jd-bg-status" class="jd-bg-status">High-quality removal uses PhotoRoom securely through the Jersey Dodgers server. Your API key never appears in the browser. The photo itself is sent to PhotoRoom for processing.</div></section>
