@@ -1,5 +1,5 @@
 import {getStore,getDeployStore} from '@netlify/blobs';
-import {getUser,verifyRequestOrigin} from '@netlify/identity';
+import {getUser,admin,verifyRequestOrigin} from '@netlify/identity';
 import {contentSchema,publicContent} from '../../src/schema.mjs';
 import seed from '../../seed.json';
 
@@ -26,9 +26,10 @@ export default async(req,context)=>{
    return respond(publicContent(record?.data||seed));
   }
 
-  const user=await getUser();
+  let user=await getUser();
+  try{if(user?.id)user=await admin.getUser(user.id)}catch{}
   const access=accessFor(user);
-  if(!access.media)return respond({error:'Administrator sign-in required.'},403);
+  if(!access.media)return respond({error:user?.id?'This account is signed in but does not have Jersey Dodgers access. Ask the Owner to refresh this staff account.':'Administrator sign-in required.'},403);
 
   if(req.method==='GET'){
    const record=await store.get('published',{type:'json'});

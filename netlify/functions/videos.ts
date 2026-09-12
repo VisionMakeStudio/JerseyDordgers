@@ -1,5 +1,5 @@
 import {getStore,getDeployStore} from '@netlify/blobs';
-import {getUser,verifyRequestOrigin} from '@netlify/identity';
+import {getUser,admin,verifyRequestOrigin} from '@netlify/identity';
 import {canEdit} from '../../src/schema.mjs';
 
 const MAX_VIDEO_BYTES=250*1024*1024;
@@ -177,7 +177,8 @@ export default async(req,context)=>{
 
   if(req.method!=='POST')return new Response(null,{status:405});
 
-  const user=await getUser();
+  let user=await getUser();
+  try{if(user?.id)user=await admin.getUser(user.id)}catch{}
   if(!canEdit(user,Netlify.env.get('DODGERS_ADMIN_EMAIL')))
    return json({error:'Administrator sign-in required.'},403);
 

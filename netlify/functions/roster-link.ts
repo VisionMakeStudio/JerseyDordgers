@@ -1,4 +1,4 @@
-import {getUser,verifyRequestOrigin} from '@netlify/identity';
+import {getUser,admin,verifyRequestOrigin} from '@netlify/identity';
 
 const rolesFor=(user:any)=>[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.appMetadata?.roles)?user.appMetadata.roles:[]),...(user?.role?[user.role]:[])];
 const canManage=(user:any)=>{
@@ -132,7 +132,8 @@ export default async(req:Request)=>{
  const respond=(body:any,status=200)=>new Response(JSON.stringify(body),{status,headers});
 
  try{
-  const user=await getUser();
+  let user=await getUser();
+  try{if(user?.id)user=await admin.getUser(user.id)}catch{}
   if(!canManage(user))return respond({error:'Coach/Admin access required.'},403);
   if(req.method!=='POST')return respond({error:'Method not allowed'},405);
   verifyRequestOrigin(req);

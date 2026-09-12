@@ -79,7 +79,7 @@ export default async(req:Request)=>{
 
    return respond({
     staff:publicUser(target),
-    message:`Access added for ${email}. Netlify Identity sent a secure password-setup email.`
+    message:`Access added for ${email}. A password-setup email was sent. After choosing a password, sign in fresh at the Jersey Dodgers Admin page.`
    });
   }
 
@@ -112,8 +112,10 @@ export default async(req:Request)=>{
    if(!id)return respond({error:'Missing staff member.'},400);
    const target=await admin.getUser(id);
    if(!target.email)return respond({error:'This staff member has no email address.'},400);
+   const role=userRoles(target).find((r:string)=>allowedRoles.has(r));
+   if(role)await admin.updateUser(target.id,{role});
    await requestPasswordRecovery(target.email);
-   return respond({ok:true,message:`Password-setup email sent to ${target.email}.`});
+   return respond({ok:true,message:`Password-setup email sent to ${target.email}. Their Jersey Dodgers role was refreshed too.`});
   }
 
   return respond({error:'Method not allowed'},405);

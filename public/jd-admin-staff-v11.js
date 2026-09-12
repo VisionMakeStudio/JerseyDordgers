@@ -99,7 +99,7 @@
 
         <div class="jd-staff-security-note">
           <strong>How invitations work</strong>
-          <p>The staff account is created securely through Netlify Identity and a password-setup email is sent to that address. They choose their own password, then sign in at the normal Jersey Dodgers Admin page.</p>
+          <p>The staff account is created securely through Netlify Identity and a password-setup email is sent to that address. They choose their own password, then return to the normal Jersey Dodgers Admin page and sign in fresh with that email and password.</p>
         </div>
       </section>
     `;
