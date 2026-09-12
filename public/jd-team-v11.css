@@ -508,3 +508,107 @@
     min-height:40px!important;
   }
 }
+
+/* ======================================================
+   V11.1 — EXACT PLAYER TOOLBAR BUTTON ALIGNMENT
+   ====================================================== */
+.jd-players-toolbar > #jd-v9-add-player,
+.jd-players-toolbar > .jd-player-tools{
+  flex:0 0 132px!important;
+  width:132px!important;
+  height:42px!important;
+  min-width:132px!important;
+  max-width:132px!important;
+  min-height:42px!important;
+  margin:0!important;
+  padding:0!important;
+  align-self:center!important;
+}
+.jd-players-toolbar > #jd-v9-add-player,
+.jd-player-tools > .jd-tools-button{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  box-sizing:border-box!important;
+  display:flex!important;
+  width:132px!important;
+  min-width:132px!important;
+  max-width:132px!important;
+  height:42px!important;
+  min-height:42px!important;
+  margin:0!important;
+  padding:0 14px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border-radius:5px!important;
+  font-size:11px!important;
+  font-weight:800!important;
+  line-height:1!important;
+  vertical-align:top!important;
+  position:relative!important;
+  top:0!important;
+  transform:none!important;
+}
+.jd-player-tools > .jd-tools-button{
+  border:1px solid #3f5f86!important;
+  background:#17273a!important;
+  color:#d9eaff!important;
+}
+.jd-player-tools > .jd-tools-button:hover{background:#1d324a!important;border-color:#5c83b0!important}
+.jd-player-tools > .jd-player-tools-menu{
+  position:absolute!important;
+  z-index:80!important;
+  top:calc(100% + 6px)!important;
+  left:0!important;
+  right:auto!important;
+  width:240px!important;
+  padding:6px!important;
+  border:1px solid #43546c!important;
+  border-radius:7px!important;
+  background:#0b121c!important;
+  box-shadow:0 16px 36px #000b!important;
+}
+.jd-player-tools > .jd-player-tools-menu[hidden]{display:none!important}
+.jd-player-tools > .jd-player-tools-menu button{display:block;width:100%;border:0;background:transparent;color:#dce8f6;text-align:left;padding:10px;border-radius:4px;font-size:11px}
+.jd-player-tools > .jd-player-tools-menu button:hover{background:#172539;color:#fff}
+@media(max-width:700px){
+  .jd-players-toolbar > #jd-v9-add-player,
+  .jd-players-toolbar > .jd-player-tools,
+  .jd-player-tools > .jd-tools-button{
+    flex-basis:124px!important;
+    width:124px!important;
+    min-width:124px!important;
+    max-width:124px!important;
+    height:40px!important;
+    min-height:40px!important;
+  }
+}
+
+/* ======================================================
+   V11.1 — PROFILE MERGE + SEASON-BASED STATS ADMIN
+   ====================================================== */
+.jd-profile-merge{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,.75fr) auto;gap:12px;align-items:end;padding:14px;border:1px solid #365474;background:#0f1b29;border-left:4px solid #168bff}
+.jd-profile-merge>div:first-child{align-self:center}
+.jd-profile-merge h3{margin:2px 0 4px;color:#fff;font-size:15px}
+.jd-profile-merge p{margin:0;color:#91a5bd;font-size:10px;line-height:1.45}
+.jd-profile-merge label{display:grid;gap:5px;color:#9fb2c8;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.jd-profile-merge input{width:100%;box-sizing:border-box}
+.jd-merge-button{height:40px;padding:0 14px;border:1px solid #4773a4;background:#173252;color:#eaf4ff;border-radius:5px;font-size:10px;font-weight:900;white-space:nowrap}
+.jd-merge-button:disabled{opacity:.4;cursor:not-allowed}
+.jd-merge-preview{grid-column:2/4;display:flex;align-items:center;gap:10px;min-height:42px;color:#91a5bd}
+.jd-merge-preview img,.jd-merge-preview>span{width:40px;height:40px;border-radius:4px;object-fit:cover;background:#153252;display:flex;align-items:center;justify-content:center;color:#9dc8ff;font-weight:900}
+.jd-merge-preview div{display:grid;gap:2px}.jd-merge-preview strong{color:#fff;font-size:11px}.jd-merge-preview small{color:#8fa4bc;font-size:9px}
+
+.jd-stats-admin-head{display:flex;justify-content:space-between;gap:22px;align-items:end;margin-bottom:14px;padding:18px;border-left:4px solid #168bff;background:linear-gradient(110deg,#101b29,#0d141d)}
+.jd-stats-admin-head h2{margin:2px 0 5px;color:#fff}.jd-stats-admin-head p{margin:0;max-width:680px;color:#8fa4bb;font-size:10px;line-height:1.5}
+.jd-stats-admin-selectors{display:flex;gap:10px;flex-wrap:wrap}.jd-stats-admin-selectors label{display:grid;gap:4px}.jd-stats-admin-selectors span{font-size:8px;font-weight:900;color:#8ea3bc;text-transform:uppercase;letter-spacing:.08em}.jd-stats-admin-selectors select{min-width:150px}
+.jd-stats-import-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}.jd-stats-import-bar>.button{min-height:40px;margin:0}.jd-stats-import-bar>.button.secondary{background:#17273a;border-color:#3f5f86;color:#d9eaff}.jd-stats-admin-count{margin-left:auto;display:flex;align-items:baseline;gap:6px;padding:0 3px}.jd-stats-admin-count strong{font-size:18px;color:#9dc8ff}.jd-stats-admin-count span{font-size:9px;color:#8fa4bc}
+.jd-stats-admin-table-wrap{overflow-x:auto;border:1px solid #26384d;background:#0d151f}.jd-stats-admin-table{width:100%;min-width:920px;border-collapse:collapse}.jd-stats-admin-table th,.jd-stats-admin-table td{padding:10px 9px;border-bottom:1px solid #223247;text-align:left;font-size:10px;white-space:nowrap}.jd-stats-admin-table thead th{background:#101c29;color:#89a1ba;font-size:8px;letter-spacing:.08em}.jd-stats-admin-table tbody tr:hover{background:#111f2e}.jd-stats-admin-table tr.no-stats td{color:#7f91a6}.jd-stats-player{display:flex;align-items:center;gap:9px;min-width:190px}.jd-stats-player img,.jd-stats-player>span{width:36px;height:36px;border-radius:4px;object-fit:cover;background:#143052;display:flex;align-items:center;justify-content:center;color:#9dc8ff;font-weight:900}.jd-stats-player div{display:grid;gap:2px}.jd-stats-player strong{color:#fff;font-size:11px}.jd-stats-player small{color:#8398af;font-size:9px}.jd-stat-edit{border:1px solid #365b83;background:#14263a;color:#cfe6ff;border-radius:4px;padding:7px 10px;font-size:9px;font-weight:900}.jd-stat-edit:hover{background:#1a3451}
+.jd-manual-stats-player{display:flex;align-items:center;gap:12px;margin:12px 0 16px;padding:12px;background:#0e1824;border:1px solid #263c55}.jd-manual-stats-player img,.jd-manual-stats-player>span{width:54px;height:54px;border-radius:5px;object-fit:cover;background:#143052;display:flex;align-items:center;justify-content:center;color:#9dc8ff;font-size:16px;font-weight:900}.jd-manual-stats-player div{display:grid;gap:3px}.jd-manual-stats-player strong{color:#fff}.jd-manual-stats-player small{color:#90a5bd;font-size:10px}
+#jd-v111-stat-form>section{margin:14px 0;padding:12px;border:1px solid #263b52;background:#0d1621}#jd-v111-stat-form>section h3{margin:0 0 10px;color:#fff;font-size:13px}.jd-stat-field-grid{display:grid;grid-template-columns:repeat(5,minmax(80px,1fr));gap:8px}.jd-stat-field-grid label{display:grid;gap:4px}.jd-stat-field-grid label span{font-size:8px;color:#91a6be;font-weight:900}.jd-stat-field-grid input{min-width:0;width:100%;box-sizing:border-box}
+@media(max-width:800px){
+  .jd-profile-merge{grid-template-columns:1fr}.jd-merge-preview{grid-column:1}.jd-merge-button{width:100%}
+  .jd-stats-admin-head{align-items:flex-start;flex-direction:column}.jd-stats-admin-selectors{width:100%}.jd-stats-admin-selectors label{flex:1}.jd-stats-admin-selectors select{width:100%;min-width:0}
+  .jd-stats-import-bar>.button{flex:1 1 180px}.jd-stats-admin-count{width:100%;margin-left:0}
+  .jd-stat-field-grid{grid-template-columns:repeat(3,minmax(75px,1fr))}
+}
+@media(max-width:520px){.jd-stat-field-grid{grid-template-columns:repeat(2,minmax(75px,1fr))}}

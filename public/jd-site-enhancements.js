@@ -541,6 +541,7 @@
     const sourceStats = phase === 'playoffs' ? (siteData.playoffStats || []) : (siteData.stats || []);
     const allRosterRows = sourceRows.filter(r => r.season === sid);
     const explicit = allRosterRows.filter(r => r.active !== false);
+    const represented = new Set(allRosterRows.map(r => String(r.player)));
     const roster = [];
 
     explicit.forEach(entry => {
@@ -555,19 +556,16 @@
       });
     });
 
-    // Legacy seasons that predate explicit rosters can still display from stats.
-    // As soon as any explicit roster rows exist for a season/set, they become
-    // authoritative — including inactive rows. This is what keeps a player you
-    // removed in Admin from reappearing publicly just because old stats remain.
-    if (!allRosterRows.length) {
-      const seen = new Set();
-      sourceStats.filter(st => st.season === sid).forEach(stat => {
-        if (seen.has(String(stat.player))) return;
-        seen.add(String(stat.player));
-        const playerItem = playerMap.get(String(stat.player));
-        if (playerItem) roster.push({...playerItem, _rosterPhase: phase});
-      });
-    }
+    // Player-by-player authority: an explicit roster row wins for that player.
+    // Active rows show; inactive rows stay hidden. Players that have never been
+    // explicitly managed for this season can still appear from legacy stats.
+    const seen = new Set();
+    sourceStats.filter(st => st.season === sid && !represented.has(String(st.player))).forEach(stat => {
+      if (seen.has(String(stat.player))) return;
+      seen.add(String(stat.player));
+      const playerItem = playerMap.get(String(stat.player));
+      if (playerItem) roster.push({...playerItem, _rosterPhase: phase});
+    });
 
     const numberValue = value => {
       const match = String(value || '').match(/\d+/);
@@ -825,8 +823,8 @@
   function visibleStatsForPhase(phase='regular'){
     const sid=selectedSeasonId(),rosterRows=(phase==='playoffs'?(siteData?.playoffRosters||[]):(siteData?.rosters||[])).filter(r=>r.season===sid),statsRows=(phase==='playoffs'?(siteData?.playoffStats||[]):(siteData?.stats||[])).filter(st=>st.season===sid);
     if(!rosterRows.length)return statsRows;
-    const activeIds=new Set(rosterRows.filter(r=>r.active!==false).map(r=>String(r.player)));
-    return statsRows.filter(st=>activeIds.has(String(st.player)));
+    const represented=new Set(rosterRows.map(r=>String(r.player))),activeIds=new Set(rosterRows.filter(r=>r.active!==false).map(r=>String(r.player)));
+    return statsRows.filter(st=>activeIds.has(String(st.player))||!represented.has(String(st.player)));
   }
   function statsGames(items,phase){
     const gp=Math.max(0,...items.map(s=>statNumber(s?.bat?.GP||s?.pitch?.GP||0)));
