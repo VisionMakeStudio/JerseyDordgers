@@ -135,3 +135,9 @@
   .jd-graphic-layout{scroll-margin-top:var(--jd-mobile-header,64px)}
   .jd-graphic-intro{padding:10px}.jd-graphic-intro p,.jd-graphic-size{display:none}
 }
+
+/* V22 occasion controls use the existing mobile tabs. */
+.jd-studio-fields{display:grid;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #29445f;min-width:0}
+.jd-extra-card{display:grid;gap:8px;padding:12px;margin-top:10px;border:1px solid #35516d;border-radius:8px;min-width:0}
+.jd-extra-card strong{overflow-wrap:anywhere;font-size:11px;color:#dce9f7}.jd-extra-actions{display:flex;gap:8px;flex-wrap:wrap}.jd-extra-card input[type=checkbox]{width:20px}
+.jd-studio-fields input[type=color]{height:44px;padding:4px}.jd-studio-fields input[type=file]{max-width:100%}
