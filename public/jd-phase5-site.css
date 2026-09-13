@@ -55,10 +55,13 @@
 }
 @media(max-width:700px){
  .home-video-section{margin-top:30px}
- .home-video-section>.media-grid{display:grid!important;grid-template-columns:1fr!important;overflow:visible!important;gap:12px!important;scroll-snap-type:none!important;padding-bottom:0!important}
+ .home-video-section>.media-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;gap:8px;padding-bottom:0}
  .home-video-section>.media-grid::-webkit-scrollbar{display:none}
- .home-video-section .media-card{display:block!important;width:100%!important;max-width:none!important;min-width:0!important;flex:none!important;scroll-snap-align:none!important}
- .home-video-section .video-frame,.home-video-section .media-video,.home-video-section .jd-video-stage{width:100%!important;min-height:0}
+ .home-video-section .media-card{width:100%;min-width:0;aspect-ratio:4/5;position:relative;overflow:hidden}
+ .home-video-section .media-card:first-child:nth-last-child(3),.home-video-section .media-card:only-child{grid-column:1/-1}
+ .home-video-section .media-card .video-frame,.home-video-section .media-card .media-video{height:100%;aspect-ratio:auto}
+ .home-video-section .media-copy{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,#000d);pointer-events:none}
+ .home-video-section .video-frame,.home-video-section .media-video{min-height:0}
  .home-results-stack{max-width:none;padding:13px}
  #ticker .ticker-label small{display:none!important}
  #ticker .ticker-label{font-size:10px!important}
@@ -73,3 +76,10 @@
 .home-results-stack.home-results-1{grid-template-columns:1fr}
 .home-results-stack.home-results-2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .home-results-stack.home-results-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+@media(max-width:700px){.home-video-section .media-copy a{pointer-events:auto}.home-video-section .media-copy .eyebrow{font-size:8px}.home-video-section .media-copy h3{font-size:11px}}
+/* Override the shared video-page grid only for homepage featured videos. */
+@media(max-width:700px){
+ .home-video-section>.media-grid.jd-video-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;overflow:visible!important}
+ .home-video-section>.media-grid>.media-card{width:100%!important;max-width:none!important;justify-self:stretch!important}
+}

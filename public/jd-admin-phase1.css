@@ -37,7 +37,7 @@
 }
 
 @media(max-width:700px){
- .phase1-admin{display:block;background:#08111b}.phase1-admin .admin-work{padding:18px 14px 38px}.phase1-admin .admin-nav{display:flex;position:fixed;top:0;right:0;bottom:0;z-index:1000;visibility:hidden;transform:translateX(105%);transition:transform .25s ease,visibility .25s;flex-direction:column;width:min(88vw,340px);height:100dvh;padding:0;background:linear-gradient(160deg,#111c2b,#080c12 70%);overflow-y:auto}.phase1-admin .admin-nav.open{visibility:visible;transform:translateX(0)}.admin-nav-title{padding:18px 20px}.admin-group-nav{padding:10px 12px}.admin-group-button{min-height:55px!important}.admin-nav-footer{margin-top:auto}.phase1-admin .admin-heading{display:grid;min-height:0;gap:13px;align-items:start}.phase1-admin .admin-heading h1{font-size:28px}.phase1-admin .admin-heading>div:last-child{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.admin-subnav{margin-top:16px;margin-inline:-2px;padding:4px}.admin-subnav-tab{min-height:34px;padding:8px 10px!important}.admin-help{margin:11px 0 16px;font-size:11px}.jd-dashboard-season{align-items:flex-start;flex-direction:column;padding:17px}.jd-dashboard-season>button{width:100%}.jd-dashboard-metrics{grid-template-columns:1fr 1fr;gap:7px}.jd-dashboard-metrics article{min-height:100px;padding:13px}.jd-dashboard-metrics strong{font-size:29px}.jd-dashboard-grid{grid-template-columns:1fr}.jd-dashboard-publish{grid-column:auto}.jd-dashboard-card{min-height:150px}.jd-dashboard-actions>div:last-child{display:grid;grid-template-columns:1fr}.jd-dashboard-actions button{width:100%}.jd-admin-settings-overview{grid-template-columns:1fr}.jd-settings-card{min-height:175px}.jd-section-intro-card{align-items:flex-start;flex-direction:column}.jd-section-intro-card>button{width:100%}.phase1-admin .settings-summary{display:grid;grid-template-columns:1fr}.phase1-admin .settings-summary img{width:100%;max-height:220px}.phase1-admin .list-toolbar{padding:9px}.jd-editor-group>.form-grid{padding:12px}.jd-editor-group>summary{padding:12px}.phase1-admin #save-state{font-size:9px;padding:7px}.phase1-admin #save-all{padding:9px 11px;font-size:11px}
+ .phase1-admin{display:block;background:#08111b}.phase1-admin .admin-work{padding:18px 14px 38px}.admin-nav-title{padding:18px 20px}.admin-group-nav{padding:10px 12px}.admin-group-button{min-height:55px!important}.admin-nav-footer{margin-top:auto}.phase1-admin .admin-heading{display:grid;min-height:0;gap:13px;align-items:start}.phase1-admin .admin-heading h1{font-size:28px}.phase1-admin .admin-heading>div:last-child{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.admin-subnav{margin-top:16px;margin-inline:-2px;padding:4px}.admin-subnav-tab{min-height:34px;padding:8px 10px!important}.admin-help{margin:11px 0 16px;font-size:11px}.jd-dashboard-season{align-items:flex-start;flex-direction:column;padding:17px}.jd-dashboard-season>button{width:100%}.jd-dashboard-metrics{grid-template-columns:1fr 1fr;gap:7px}.jd-dashboard-metrics article{min-height:100px;padding:13px}.jd-dashboard-metrics strong{font-size:29px}.jd-dashboard-grid{grid-template-columns:1fr}.jd-dashboard-publish{grid-column:auto}.jd-dashboard-card{min-height:150px}.jd-dashboard-actions>div:last-child{display:grid;grid-template-columns:1fr}.jd-dashboard-actions button{width:100%}.jd-admin-settings-overview{grid-template-columns:1fr}.jd-settings-card{min-height:175px}.jd-section-intro-card{align-items:flex-start;flex-direction:column}.jd-section-intro-card>button{width:100%}.phase1-admin .settings-summary{display:grid;grid-template-columns:1fr}.phase1-admin .settings-summary img{width:100%;max-height:220px}.phase1-admin .list-toolbar{padding:9px}.jd-editor-group>.form-grid{padding:12px}.jd-editor-group>summary{padding:12px}.phase1-admin #save-state{font-size:9px;padding:7px}.phase1-admin #save-all{padding:9px 11px;font-size:11px}
 }
 
 @media(max-width:430px){.jd-dashboard-metrics{grid-template-columns:1fr 1fr}.jd-dashboard-metrics article{min-height:92px}.jd-dashboard-metrics span{font-size:7px}.jd-dashboard-metrics strong{font-size:26px}.phase1-admin .admin-heading>div:last-child{grid-template-columns:1fr}.phase1-admin #save-all{width:100%}}
@@ -48,11 +48,21 @@
 /* Stable Admin Rebuild — persistent shell and click safety */
 #admin-shell .admin-work{position:relative;z-index:1}
 #admin-shell #section-content{position:relative;z-index:2;isolation:isolate}
-#admin-shell #admin-menu-backdrop{pointer-events:none!important}
-body.admin-menu-open #admin-shell #admin-menu-backdrop{pointer-events:auto!important}
-@media(min-width:701px){#admin-shell #admin-menu-backdrop{display:none!important;pointer-events:none!important}}
 .jd-dashboard-season-line{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
 .jd-dashboard-season-line h2{margin:5px 0 4px}
 .jd-dashboard-season-line label{display:flex;align-items:center;gap:8px;color:#7f95ad;font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
 .jd-dashboard-season-line select{min-width:150px;min-height:34px;padding:6px 30px 6px 9px;border:1px solid #35516d;border-radius:5px;background:#0a1623;color:#eef6ff;font-size:11px;font-weight:800;text-transform:none;letter-spacing:0}
 @media(max-width:700px){.jd-dashboard-season-line{display:grid;width:100%;gap:8px}.jd-dashboard-season-line label{justify-content:space-between}.jd-dashboard-season-line select{flex:1;min-width:0}}
+
+/* V21: a single drawer and backdrop state, outside the content stacking context. */
+#admin-menu-backdrop{display:none!important;pointer-events:none!important}
+@media(max-width:700px){
+  #admin-shell .admin-nav{display:flex;position:fixed;inset:0 0 0 auto;z-index:1000;width:min(88vw,340px);height:100dvh;padding:0;flex-direction:column;justify-content:flex-start;overflow-y:auto;background:#0b1420;visibility:hidden;pointer-events:none;transform:translateX(105%);transition:transform .2s ease}
+  body.admin-menu-open #admin-shell .admin-nav.open{visibility:visible;pointer-events:auto;transform:translateX(0)}
+  body.admin-menu-open #admin-shell:has(.admin-nav.open) #admin-menu-backdrop:not([hidden]){display:block!important;pointer-events:auto!important;position:fixed;inset:0;z-index:900;margin:0;border:0;border-radius:0;background:#000b}
+  #admin-shell button, #admin-shell a.button, #admin-shell summary, #editor button, #cropper button, body>header button{min-height:44px!important;min-width:44px;touch-action:manipulation}
+  #admin-shell input:not([type=checkbox]):not([type=radio]),#admin-shell select{min-height:44px}
+  #admin-shell input[type=range]{touch-action:pan-y}
+  #admin-shell .admin-subnav{overflow-x:auto;flex-wrap:nowrap}
+  #admin-shell .admin-subnav-tab{flex-shrink:0}
+}

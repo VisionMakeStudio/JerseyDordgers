@@ -7,7 +7,7 @@
   const $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const CANVAS_W=1080,CANVAS_H=1350;
-  const GENERATOR_VERSION='14.0',MAX_TRANSFER_BYTES=4_000_000;
+  const GENERATOR_VERSION='21.0',MAX_TRANSFER_BYTES=4_000_000;
   const EDITORIAL_BACKGROUND='/assets/jd-editorial-city-v12-9.png';
   const SCRIPT_LOGO='/assets/jd-script-logo-official.png';
   const D_MARK='/assets/jd-d-mark-official.png';
@@ -20,8 +20,8 @@
   const clamp=(n,min,max)=>Math.max(min,Math.min(max,Number(n)||0));
   const TITLE_FONT="'Bebas Neue', Impact, Haettenschweiler, sans-serif";
   const CONDENSED_FONT="'Oswald', 'Arial Narrow', Arial, sans-serif";
-  const ELECTRIC_FONT="'Teko', 'Arial Narrow', Arial, sans-serif";
-  const CLASSIC_FONT="'Graduate', Georgia, serif";
+  const ELECTRIC_FONT="'Chakra Petch', 'Arial Black', Arial, sans-serif";
+  const CLASSIC_FONT="'Roboto Slab', Rockwell, Georgia, serif";
   const SIGNATURE_FONT="'Mrs Saint Delafield', 'Alex Brush', 'Brush Script MT', cursive";
 
   const STYLE_DEFAULTS={
@@ -34,7 +34,7 @@
   let selectedPlayerId='',selectedSeasonId='',phase='regular';
   let photoSource='',photoImage=null,photoLabel='';
   let cutoutCanvas=null,cutoutSource='';
-  let logoScript=null,logoMark=null,editorialBackground=null;
+  let logoScript=null,logoMark=null,editorialBackground=null,electricBackground=null,classicBackground=null;
   let generated=false,drag=null,previewResizeObserver=null;
   let statRows=[];
   let textState={};
@@ -148,7 +148,9 @@
   async function loadLogos(){await Promise.all([
     !logoScript&&loadImage(SCRIPT_LOGO).then(img=>logoScript=img).catch(()=>null),
     !logoMark&&loadImage(D_MARK).then(img=>logoMark=img).catch(()=>null),
-    !editorialBackground&&loadImage(EDITORIAL_BACKGROUND).then(img=>editorialBackground=img).catch(()=>null)
+    !editorialBackground&&loadImage(EDITORIAL_BACKGROUND).then(img=>editorialBackground=img).catch(()=>null),
+    !electricBackground&&loadImage('/assets/jd-electric-stadium-v21.png').then(img=>electricBackground=img).catch(()=>null),
+    !classicBackground&&loadImage('/assets/jd-classic-heritage-v21.png').then(img=>classicBackground=img).catch(()=>null)
   ])}
   function currentTopLogo(){
     if(topLogoMode==='none')return null;
@@ -159,7 +161,8 @@
   function drawTopLogo(ctx){
     const img=currentTopLogo();if(!img)return;
     const isMark=topLogoMode==='mark';
-    const baseW=isMark?132:340,baseH=isMark?132:176;
+    const classic=graphicStyle==='classic';
+    const baseW=isMark?(classic?90:132):(classic?220:340),baseH=isMark?(classic?90:132):(classic?110:176);
     const scale=clamp(topLogoScale,.45,2);
     drawImageContain(ctx,img,34+clamp(topLogoX,-150,520),38+clamp(topLogoY,-120,340),baseW*scale,baseH*scale,clamp(topLogoOpacity,.15,1));
   }
@@ -520,6 +523,16 @@
     if(playerArt)drawGhostPlayer(ctx,playerArt,'left');const jersey=String(textState.jerseyNumber||'10').replace(/^#/,'');ctx.save();ctx.globalAlpha=.32;ctx.strokeStyle='#35659a';ctx.lineWidth=2;ctx.font=`900 360px ${TITLE_FONT}`;ctx.strokeText(jersey||'10',4,920);ctx.restore();drawVignette(ctx,.32);
   }
   function drawElectricBackground(ctx){
+    if(electricBackground){
+      ctx.drawImage(electricBackground,0,0,CANVAS_W,CANVAS_H);
+      const shade=ctx.createLinearGradient(460,0,1080,0);shade.addColorStop(0,'rgba(2,9,20,0)');shade.addColorStop(.4,'rgba(2,9,20,.55)');shade.addColorStop(1,'rgba(2,9,20,.72)');ctx.fillStyle=shade;ctx.fillRect(460,0,620,1215);
+      ctx.save();ctx.strokeStyle='rgba(90,200,255,.3)';ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(535,540);ctx.lineTo(1005,540);ctx.lineTo(1044,579);ctx.lineTo(1044,646);ctx.stroke();
+      ctx.fillStyle='#42c9ff';for(let i=0;i<5;i++)ctx.fillRect(566+i*18,554,10,4);
+      ctx.globalAlpha=.16;ctx.font=`700 330px ${ELECTRIC_FONT}`;ctx.strokeText(String(textState.jerseyNumber||'').replace(/^#/,''),40,1090);
+      ctx.restore();return;
+    }
+
     const bg=ctx.createLinearGradient(0,0,0,CANVAS_H);bg.addColorStop(0,'#020914');bg.addColorStop(.52,'#04111f');bg.addColorStop(1,'#010306');ctx.fillStyle=bg;ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
     // Stadium bowl and field glow.
     const field=ctx.createRadialGradient(470,1110,30,470,1110,650);field.addColorStop(0,'rgba(14,111,182,.28)');field.addColorStop(.43,'rgba(4,45,82,.12)');field.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=field;ctx.fillRect(0,500,CANVAS_W,700);
@@ -535,6 +548,15 @@
     drawNoise(ctx,2600,.034);drawVignette(ctx,.68);
   }
   function drawClassicBackground(ctx){
+    if(classicBackground){
+      ctx.drawImage(classicBackground,0,0,CANVAS_W,CANVAS_H);
+      ctx.save();ctx.strokeStyle='rgba(13,53,93,.28)';ctx.lineWidth=2;
+      ctx.strokeRect(42,120,460,840);ctx.strokeRect(48,126,448,828);
+      ctx.fillStyle='#b5363e';ctx.fillRect(54,572,432,4);
+      ctx.fillStyle='#173f62';ctx.font=`700 13px ${CLASSIC_FONT}`;ctx.fillText('JERSEY DODGERS  /  CLUBHOUSE COLLECTION',54,607);
+      ctx.restore();return;
+    }
+
     // Heritage print: deep Dodger blue with warm paper, scorecard and diamond geometry.
     ctx.fillStyle='#07182b';ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
     const paper=ctx.createLinearGradient(0,0,540,0);paper.addColorStop(0,'#f4ecda');paper.addColorStop(.78,'#e8dcc3');paper.addColorStop(1,'rgba(225,211,184,.15)');ctx.fillStyle=paper;ctx.fillRect(0,0,525,CANVAS_H);
@@ -556,7 +578,7 @@
       if(mode==='classic'){ctx.fillStyle='rgba(247,239,222,.94)';ctx.strokeStyle=i===0?'rgba(219,48,62,.80)':'rgba(20,67,112,.46)';ctx.lineWidth=i===0?4:2}
       else if(mode==='electric'){const g=ctx.createLinearGradient(r.x,r.y,r.x,r.y+r.h);g.addColorStop(0,'rgba(10,35,59,.90)');g.addColorStop(1,'rgba(1,9,18,.94)');ctx.fillStyle=g;ctx.strokeStyle='rgba(43,169,255,.88)';ctx.lineWidth=2.5;ctx.shadowColor='rgba(22,139,255,.48)';ctx.shadowBlur=16}
       else{ctx.fillStyle='rgba(1,6,12,.90)';ctx.strokeStyle='rgba(27,125,225,.82)';ctx.lineWidth=2}
-      ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.textAlign='center';const valueFont=mode==='electric'?ELECTRIC_FONT:mode==='classic'?CLASSIC_FONT:TITLE_FONT;const valueWeight=mode==='classic'?700:900;ctx.fillStyle=mode==='classic'?'#0c3155':'#fff';const start=mode==='electric'?67:mode==='classic'?52:54;const min=mode==='electric'?34:mode==='classic'?26:29;const vs=fitText(ctx,s.value,r.w-18,start,min,valueFont,valueWeight);ctx.font=`${valueWeight} ${vs}px ${valueFont}`;ctx.fillText(s.value,r.x+r.w/2,r.y+(mode==='electric'?70:66));ctx.fillStyle=mode==='classic'?'#40566c':'#d9e6f3';const ls=fitText(ctx,s.label,r.w-16,mode==='electric'?19:18,11,CONDENSED_FONT,700);ctx.font=`700 ${ls}px ${CONDENSED_FONT}`;const parts=s.label.split(' '),ly=r.y+(mode==='electric'?116:111);if(parts.length>1&&ctx.measureText(s.label).width>r.w-16){const mid=Math.ceil(parts.length/2);ctx.fillText(parts.slice(0,mid).join(' '),r.x+r.w/2,ly-10);ctx.fillText(parts.slice(mid).join(' '),r.x+r.w/2,ly+13)}else ctx.fillText(s.label,r.x+r.w/2,ly);ctx.restore()})
+      ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.textAlign='center';const valueFont=mode==='electric'?ELECTRIC_FONT:mode==='classic'?CLASSIC_FONT:TITLE_FONT;const valueWeight=mode==='editorial'?900:700;ctx.fillStyle=mode==='classic'?'#0c3155':'#fff';const start=mode==='electric'?67:mode==='classic'?52:54;const min=mode==='electric'?34:mode==='classic'?26:29;const vs=fitText(ctx,s.value,r.w-18,start,min,valueFont,valueWeight);ctx.font=`${valueWeight} ${vs}px ${valueFont}`;ctx.fillText(s.value,r.x+r.w/2,r.y+(mode==='electric'?70:66));ctx.fillStyle=mode==='classic'?'#40566c':'#d9e6f3';const ls=fitText(ctx,s.label,r.w-16,mode==='electric'?19:18,11,CONDENSED_FONT,700);ctx.font=`700 ${ls}px ${CONDENSED_FONT}`;const parts=s.label.split(' '),ly=r.y+(mode==='electric'?116:111);if(parts.length>1&&ctx.measureText(s.label).width>r.w-16){const mid=Math.ceil(parts.length/2);ctx.fillText(parts.slice(0,mid).join(' '),r.x+r.w/2,ly-10);ctx.fillText(parts.slice(mid).join(' '),r.x+r.w/2,ly+13)}else ctx.fillText(s.label,r.x+r.w/2,ly);ctx.restore()})
   }
   function drawFooter(ctx,mode){
     const grad=ctx.createLinearGradient(0,1188,0,1350);if(mode==='classic'){grad.addColorStop(0,'rgba(6,28,52,.94)');grad.addColorStop(1,'rgba(3,14,27,1)')}else{grad.addColorStop(0,'rgba(2,6,10,.90)');grad.addColorStop(1,'rgba(1,3,6,.99)')}ctx.fillStyle=grad;ctx.fillRect(0,1188,CANVAS_W,162);
@@ -632,9 +654,70 @@
     }
   }
 
+  // Move the original controls: input values, canvas and handlers survive tab switches.
+  let mobileSection='style', mobileEditorCleanup=null;
+  const mobileEditorQuery=window.matchMedia('(max-width: 900px)');
+  function installMobileEditor(){
+    mobileEditorCleanup?.();
+    const controls=$('.jd-graphic-controls'),stage=$('.jd-graphic-stage-wrap');
+    const sections=Array.from(controls.children), placement=$('.jd-preview-placement');
+    const photo=sections[1], effects=document.createElement('section');
+    effects.className='jd-mobile-effects';
+    effects.innerHTML='<h3>Effects</h3>';
+    const effectNodes=[$('#jd-edge-treatment').closest('.jd-graphic-field-grid'),$('.jd-edge-intensity')];
+    const moved=[placement,...effectNodes].map(node=>{const marker=document.createComment('desktop control position');node.before(marker);return {node,marker}});
+    const tabs=document.createElement('div');tabs.className='jd-mobile-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','Graphic controls');
+    const panels={style:sections[0],photo,stats:sections[3],text:sections[4],placement,logo:sections[2],effects,export:sections[5]};
+    for(const [key,panel] of Object.entries(panels)){
+      panel.dataset.mobilePanel=key;
+      panel.id=panel.id||`jd-panel-${key}`;
+      const button=document.createElement('button');button.type='button';button.id=`jd-tab-${key}`;
+      button.textContent=key[0].toUpperCase()+key.slice(1);button.dataset.panel=key;
+      button.setAttribute('role','tab');button.setAttribute('aria-controls',panel.id);
+      tabs.append(button);
+    }
+    stage.append(tabs);
+    const select=(key,focus=false)=>{
+      mobileSection=key;
+      for(const [name,panel] of Object.entries(panels)){
+        panel.classList.toggle('jd-mobile-selected',name===key);
+        const button=tabs.querySelector(`[data-panel="${name}"]`);
+        button.setAttribute('aria-selected',String(name===key));button.tabIndex=name===key?0:-1;
+      }
+      if(focus){controls.scrollTop=0;const button=tabs.querySelector(`[data-panel="${key}"]`);button.focus({preventScroll:true});tabs.scrollLeft=button.offsetLeft-tabs.offsetLeft-(tabs.clientWidth-button.offsetWidth)/2;}
+    };
+    tabs.addEventListener('click',e=>{const button=e.target.closest('button');if(button)select(button.dataset.panel,true)});
+    tabs.addEventListener('keydown',e=>{
+      const keys=Object.keys(panels);let i=keys.indexOf(mobileSection);
+      if(e.key==='ArrowRight')i=(i+1)%keys.length;else if(e.key==='ArrowLeft')i=(i+keys.length-1)%keys.length;else if(e.key==='Home')i=0;else if(e.key==='End')i=keys.length-1;else return;
+      e.preventDefault();select(keys[i],true);
+    });
+    let mobile=false,desktopTextOpen=sections[4].open;
+    const update=()=>{
+      if(!controls.isConnected)return;
+      const next=mobileEditorQuery.matches;
+      if(next&&!mobile){
+        desktopTextOpen=sections[4].open;sections[4].open=true;
+        controls.append(placement,effects);effectNodes.forEach(node=>effects.append(node));
+        for(const [key,panel] of Object.entries(panels)){panel.setAttribute('role','tabpanel');panel.setAttribute('aria-labelledby',`jd-tab-${key}`);}
+      }else if(!next&&mobile){
+        moved.forEach(({node,marker})=>marker.after(node));effects.remove();sections[4].open=desktopTextOpen;
+        Object.values(panels).forEach(panel=>{panel.removeAttribute('role');panel.removeAttribute('aria-labelledby')});
+      }
+      mobile=next;
+      const header=document.querySelector('body>header');
+      $('.jd-graphic-layout').style.setProperty('--jd-mobile-header',`${Math.ceil(header?.getBoundingClientRect().height||0)}px`);
+      select(mobileSection);fitDesktopPreview();
+    };
+    window.addEventListener('resize',update);
+    mobileEditorCleanup=()=>window.removeEventListener('resize',update);
+    update();
+    if(mobileEditorQuery.matches)requestAnimationFrame(()=>{if(controls.isConnected)$('.jd-graphic-layout')?.scrollIntoView({block:'start'})});
+  }
+
   function renderControls(){
     const content=$('#section-content');if(!content)return;const seasonOpts=seasons().map(s=>`<option value="${esc(s.id)}" ${s.id===selectedSeasonId?'selected':''}>${esc(s.name)}</option>`).join('');
-    const styleCaption=graphicStyle==='editorial'?'Dark editorial poster with gray skyline, bridge, baseball-field geometry, ghost portrait, signature and giant jersey number.':graphicStyle==='electric'?'Night-game stadium atmosphere with scoreboard pixels, light towers, energy ribbons and electric effects behind the player.':'Baseball heritage print with warm scorecard paper, diamond geometry, seams, ticket details and vintage athletic typography.';
+    const styleCaption=graphicStyle==='editorial'?'Dark editorial poster with gray skyline, bridge, baseball-field geometry, ghost portrait, signature and giant jersey number.':graphicStyle==='electric'?'Floodlit stadium, cinematic blue smoke, angular Chakra Petch lettering and luminous scoreboard stats.':'Engraved ballpark, distressed cream ticket paper, stitched baseball details and distinctive Roboto Slab lettering.';
     const styleName=graphicStyle==='editorial'?'EDITORIAL / CITY':graphicStyle==='electric'?'ELECTRIC / NIGHT GAME':'CLASSIC / BASEBALL HERITAGE';
     content.innerHTML=`<div class="jd-graphic-shell"><div class="jd-graphic-intro"><div><span class="eyebrow">SOCIAL GRAPHICS</span><h2>Player of the Week Generator</h2><p>Three fully different Jersey Dodgers poster systems with bigger type, custom branding, unlimited local cutouts and live effects.</p></div><span class="jd-graphic-size">1080 × 1350 · 4:5 · PHASE 4</span></div><div class="jd-graphic-layout">
       <div class="jd-graphic-controls">
@@ -647,11 +730,11 @@
       </div>
       <div class="jd-graphic-stage-wrap"><div class="jd-graphic-stage-head"><strong>LIVE POST PREVIEW</strong><span id="jd-preview-style-name">${styleName} · 1080 × 1350</span></div><div class="jd-graphic-canvas-shell"><canvas id="jd-potw-canvas" width="1080" height="1350" aria-label="Player of the Week graphic preview"></canvas></div><div class="jd-preview-placement"><strong>Player placement</strong><div class="jd-placement-row"><label>Size</label><input id="jd-player-scale" type="range" min="0.60" max="1.75" step="0.01" value="${playerScale}"><output id="jd-player-scale-value">${Math.round(playerScale*100)}%</output></div><div class="jd-placement-row"><label>Left / right</label><input id="jd-player-x" type="range" min="-280" max="280" step="1" value="${playerX}"><output id="jd-player-x-value">${playerX}</output></div><div class="jd-placement-row"><label>Up / down</label><input id="jd-player-y" type="range" min="-220" max="180" step="1" value="${playerY}"><output id="jd-player-y-value">${playerY}</output></div><button type="button" id="jd-reset-placement">Reset this style placement</button><small>You can also drag the player directly on the preview. Branding and visual effects stay behind the player; stats, title and footer stay above him.</small></div></div>
     </div></div>`;
-    bindControls();renderStatRows();paintPhotoPreview();syncBrandingControls();renderPoster();watchPreviewSize();
+    installMobileEditor();bindControls();renderStatRows();paintPhotoPreview();syncBrandingControls();renderPoster();watchPreviewSize();
   }
 
   function bindControls(){
-    $('#jd-graphic-style')?.addEventListener('change',e=>{saveStyleState();graphicStyle=['editorial','electric','classic'].includes(e.target.value)?e.target.value:'editorial';restoreStyleState(graphicStyle);syncPlacement();const name=$('#jd-preview-style-name');if(name)name.textContent=`${graphicStyle==='editorial'?'EDITORIAL / CITY':graphicStyle==='electric'?'ELECTRIC / NIGHT GAME':'CLASSIC / BASEBALL HERITAGE'} · 1080 × 1350`;const cap=$('#jd-style-caption');if(cap)cap.textContent=graphicStyle==='editorial'?'Dark editorial poster with gray skyline, bridge, baseball-field geometry, ghost portrait, signature and giant jersey number.':graphicStyle==='electric'?'Night-game stadium atmosphere with scoreboard pixels, light towers, energy ribbons and electric effects behind the player.':'Baseball heritage print with warm scorecard paper, diamond geometry, seams, ticket details and vintage athletic typography.';renderPoster()});
+    $('#jd-graphic-style')?.addEventListener('change',e=>{saveStyleState();graphicStyle=['editorial','electric','classic'].includes(e.target.value)?e.target.value:'editorial';restoreStyleState(graphicStyle);syncPlacement();const name=$('#jd-preview-style-name');if(name)name.textContent=`${graphicStyle==='editorial'?'EDITORIAL / CITY':graphicStyle==='electric'?'ELECTRIC / NIGHT GAME':'CLASSIC / BASEBALL HERITAGE'} · 1080 × 1350`;const cap=$('#jd-style-caption');if(cap)cap.textContent=graphicStyle==='editorial'?'Dark editorial poster with gray skyline, bridge, baseball-field geometry, ghost portrait, signature and giant jersey number.':graphicStyle==='electric'?'Floodlit stadium, cinematic blue smoke, angular Chakra Petch lettering and luminous scoreboard stats.':'Engraved ballpark, distressed cream ticket paper, stitched baseball details and distinctive Roboto Slab lettering.';renderPoster()});
     $('#jd-graphic-season')?.addEventListener('change',async e=>{selectedSeasonId=e.target.value;selectedPlayerId=rosterPlayers()[0]?.id||'';cutoutCanvas=null;cutoutSource='';cutoutMethod='';resetStyleStates();resetStats();resetText();renderControls();await useProfilePhoto()});
     $('#jd-graphic-phase')?.addEventListener('change',async e=>{phase=e.target.value==='playoffs'?'playoffs':'regular';selectedPlayerId=rosterPlayers()[0]?.id||'';cutoutCanvas=null;cutoutSource='';cutoutMethod='';resetStyleStates();resetStats();resetText();renderControls();await useProfilePhoto()});
     $('#jd-graphic-player')?.addEventListener('change',onPlayerChanged);$('#jd-use-profile-photo')?.addEventListener('click',useProfilePhoto);$('#jd-graphic-upload-photo')?.addEventListener('change',e=>useUploadedPhoto(e.target.files?.[0]));
@@ -708,7 +791,7 @@
       selectedSeasonId=selectedSeasonId&&data.seasons.some(s=>s.id===selectedSeasonId)?selectedSeasonId:currentSeason();
       const ps=rosterPlayers();selectedPlayerId=ps.some(p=>String(p.id)===String(selectedPlayerId))?selectedPlayerId:(ps[0]?.id||'');
       resetStyleStates();resetStats();resetText();await loadLogos();
-      try{await document.fonts?.load?.(`72px ${SIGNATURE_FONT}`);await document.fonts?.ready}catch{}
+      try{await Promise.all([document.fonts.load(`72px ${SIGNATURE_FONT}`),document.fonts.load(`700 72px ${ELECTRIC_FONT}`),document.fonts.load(`600 72px ${ELECTRIC_FONT}`),document.fonts.load(`700 72px ${CLASSIC_FONT}`),document.fonts.load(`900 72px ${TITLE_FONT}`)]);await document.fonts.ready}catch{}
       renderControls();await useProfilePhoto();
     }catch(e){setStatus(e.message,true);throw e}
     })();
