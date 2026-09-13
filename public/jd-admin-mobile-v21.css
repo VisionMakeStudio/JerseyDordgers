@@ -1,0 +1,36 @@
+/* Jersey Dodgers Admin — mobile interaction stability v21 */
+@media (max-width:700px){
+  body>header{position:sticky!important;top:0;z-index:1600!important;isolation:isolate}
+  #admin-menu-toggle:not([hidden]){display:flex!important;position:relative!important;z-index:1650!important;align-items:center!important;justify-content:center!important;gap:8px!important;min-width:48px!important;min-height:44px!important;padding:8px 6px!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent}
+  #admin-menu-toggle span{pointer-events:none}
+  #admin-menu-toggle i,#admin-menu-toggle i:before,#admin-menu-toggle i:after{pointer-events:none}
+
+  #admin-shell{position:relative!important;isolation:isolate!important}
+  #admin-shell #admin-menu-backdrop{display:block!important;position:fixed!important;inset:0!important;z-index:1700!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:#000b!important;opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:opacity .18s ease,visibility .18s ease!important;touch-action:manipulation!important}
+  body.admin-menu-open #admin-shell #admin-menu-backdrop{opacity:1!important;visibility:visible!important;pointer-events:auto!important}
+
+  #admin-shell .admin-nav{display:flex!important;position:fixed!important;top:0!important;right:0!important;bottom:auto!important;left:auto!important;z-index:1800!important;width:min(88vw,340px)!important;max-width:340px!important;height:100dvh!important;min-height:100dvh!important;padding:0!important;margin:0!important;border:0!important;border-left:1px solid #26384d!important;background:linear-gradient(160deg,#111c2b,#080c12 70%)!important;box-shadow:-16px 0 50px #000c!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;-webkit-overflow-scrolling:touch!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;transform:translate3d(102%,0,0)!important;transition:transform .22s ease,opacity .16s ease,visibility .22s ease!important;flex-direction:column!important;flex-wrap:nowrap!important;align-items:stretch!important;justify-content:flex-start!important}
+  #admin-shell .admin-nav.open{visibility:visible!important;opacity:1!important;pointer-events:auto!important;transform:translate3d(0,0,0)!important}
+
+  #admin-shell .admin-mobile-head{display:flex!important;position:sticky!important;top:0!important;z-index:2!important;align-items:center!important;justify-content:space-between!important;min-height:68px!important;padding:14px 16px!important;margin:0!important;border-bottom:1px solid #26384d!important;background:#0d1723!important}
+  #admin-shell #admin-menu-close{min-width:64px!important;min-height:44px!important;padding:8px 12px!important;pointer-events:auto!important;touch-action:manipulation!important}
+  #admin-shell .admin-nav-title{padding:16px!important}
+  #admin-shell .admin-group-nav{display:grid!important;flex:0 0 auto!important;gap:5px!important;padding:10px 12px!important;min-height:0!important;height:auto!important;overflow:visible!important}
+  #admin-shell .admin-group-button{display:flex!important;align-items:center!important;width:100%!important;min-height:48px!important;padding:12px 13px!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important}
+  #admin-shell .admin-group-button span{pointer-events:none!important}
+  #admin-shell .admin-nav-footer{margin-top:auto!important;padding:10px 12px max(18px,env(safe-area-inset-bottom))!important}
+  #admin-shell .admin-mobile-site,#admin-shell .admin-mobile-signout{display:flex!important;align-items:center!important;width:100%!important;min-height:48px!important;padding:12px 8px!important;pointer-events:auto!important;touch-action:manipulation!important}
+
+  #admin-shell .admin-work{position:relative!important;z-index:1!important;pointer-events:auto!important}
+  #admin-shell #section-content{position:relative!important;z-index:1!important;pointer-events:auto!important}
+  #admin-shell #section-content button,#admin-shell #section-content a,#admin-shell #section-content input,#admin-shell #section-content select,#admin-shell #section-content textarea,#admin-shell #section-content summary,#admin-shell #admin-subnav button,#admin-shell #save-all{pointer-events:auto!important;touch-action:manipulation}
+  #admin-shell #section-content button,#admin-shell #admin-subnav button,#admin-shell #save-all{min-height:44px}
+  #admin-shell .admin-subnav{position:relative!important;z-index:3!important;overscroll-behavior-x:contain!important}
+  #admin-shell .admin-subnav-tab{min-height:44px!important;padding:10px 12px!important}
+
+  body.admin-menu-open{overflow:hidden!important}
+  body.admin-menu-open #admin-shell .admin-nav{touch-action:pan-y!important}
+}
+@media (min-width:701px){
+  #admin-shell #admin-menu-backdrop{display:none!important;visibility:hidden!important;pointer-events:none!important}
+}
