@@ -11,6 +11,7 @@ const awardType=z.enum(['Player of the Week','Hitter of the Week','Pitcher of th
 const awardStat=z.object({label:z.string().max(30),value:z.string().max(30)});
 const awardWinner=z.object({player:id,awardType:awardType.default('Player of the Week'),customAward:short.default(''),statLine:short.default(''),photo:image.default(''),graphic:image.default(''),stats:z.array(awardStat).max(5).default([])});
 export const schemas={
+ gameRecaps:z.object({id,title:short.min(1),date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),opponent:short.min(1),ourScore:z.number().int().min(0).max(200).nullable(),theirScore:z.number().int().min(0).max(200).nullable(),summary:text.default(''),body:z.string().max(40000).default(''),lineScore:z.string().max(12000).default(''),boxScore:z.string().max(40000).default(''),source:link.default(''),image:image.default(''),author:short.default(''),published:z.boolean().default(false)}).refine(r=>(r.ourScore===null)===(r.theirScore===null),'Enter both final scores, or leave both blank'),
  settings:z.object({teamName:short.min(1),founded:short,tagline:short,heroTitle:short,heroText:text,heroImage:image,logo:image,scriptLogo:image,leagueName:short,leagueLogo:image,leagueJoinUrl:link.default('https://www.primetimebaseballleague.com/teams/?u=PRIMETIMEBASEBALLLEA&s=baseball'),instagram:link,youtube:link.default('https://youtube.com/@JerseyDodgers?si=FP33CxgYEcQ_az5B'),contactEmail:z.union([z.literal(''),z.email()]),applicationEmail:z.union([z.literal(''),z.email()]).default(''),currentSeason:id,championshipTitle:short,championshipText:text,championshipImage:image,tryoutsTitle:short,tryoutsText:text,tryoutsLink:link,sponsorTitle:short,sponsorText:text,footerText:short,creatorName:short.default('Vision Make Studio'),creatorUrl:link.default('https://VisionMakeStudio.com')}),
  seasons:z.object({id,name:short.min(1),status:z.enum(['active','archived','upcoming']),note:text}),
  fields:z.object({id,name:short.min(1),address:short,mapsUrl:link,notes:text}),
@@ -32,6 +33,7 @@ export const schemas={
 };
 export const contentSchema=z.object({
  settings:schemas.settings,
+ gameRecaps:z.array(schemas.gameRecaps).max(2000).default([]),
  seasons:z.array(schemas.seasons).max(100),
  fields:z.array(schemas.fields).max(500),
  teams:z.array(schemas.teams).max(500),
@@ -79,5 +81,5 @@ export function canEdit(user,adminEmail){
 export function publicContent(data){
  const normalized=contentSchema.parse(data);
  const {jerseyRecords,...safe}=normalized;
- return {...safe,rosters:normalized.rosters.map(({source,...roster})=>roster),playoffRosters:normalized.playoffRosters.map(({source,...roster})=>roster),media:normalized.media.filter(x=>x.published),channels:normalized.channels.filter(x=>x.active),sponsors:normalized.sponsors.filter(x=>x.active),weeklyAwards:normalized.weeklyAwards.filter(x=>x.published),spotlights:normalized.spotlights.filter(x=>x.published)};
+ return {...safe,gameRecaps:normalized.gameRecaps.filter(x=>x.published),rosters:normalized.rosters.map(({source,...roster})=>roster),playoffRosters:normalized.playoffRosters.map(({source,...roster})=>roster),media:normalized.media.filter(x=>x.published),channels:normalized.channels.filter(x=>x.active),sponsors:normalized.sponsors.filter(x=>x.active),weeklyAwards:normalized.weeklyAwards.filter(x=>x.published),spotlights:normalized.spotlights.filter(x=>x.published)};
 }

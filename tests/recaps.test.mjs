@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+import {contentSchema,publicContent} from '../src/schema.mjs';import {recapArticle,pastedTable} from '../src/recaps.mjs';
+const seed=JSON.parse(fs.readFileSync(new URL('../seed.json',import.meta.url)));
+const post={id:'test-recap',title:'Game recap',date:'2026-09-13',opponent:'Braves',ourScore:6,theirScore:8};
+test('older data defaults to no recaps; drafts never publish',()=>{assert.deepEqual(contentSchema.parse(seed).gameRecaps,[]);const d=contentSchema.parse({...seed,gameRecaps:[post]});assert.equal(d.gameRecaps[0].published,false);assert.equal(publicContent(d).gameRecaps.length,0);d.gameRecaps[0].published=true;assert.equal(publicContent(d).gameRecaps.length,1)});
+test('recap scores require both totals and links reject scripts',()=>{assert.equal(contentSchema.safeParse({...seed,gameRecaps:[{...post,theirScore:null}]}).success,false);assert.equal(contentSchema.safeParse({...seed,gameRecaps:[{...post,source:'javascript:alert(1)'}]}).success,false)});
+test('tables format aligned data and preserve uneven pasted text',()=>{assert.match(pastedTable('Team\tR\tH\nDodgers\t6\t3'),/<table>/);assert.match(pastedTable('Team\tR\nDodgers'),/<pre/);assert.doesNotMatch(pastedTable('Name\tR\n<img src=x>\t2'),/<img/)});
+test('article and table markup are escaped',()=>{const html=recapArticle({...post,body:'<script>alert(1)</script>',boxScore:'Name\tR\n<svg onload=alert(1)>\t2',source:'javascript:alert(1)'});assert.doesNotMatch(html,/<script|<svg|href="javascript:/);assert.match(html,/&lt;script&gt;/)});

@@ -54,3 +54,8 @@ for = "/*"
 X-Content-Type-Options = "nosniff"
 Referrer-Policy = "strict-origin-when-cross-origin"
 X-Frame-Options = "DENY"
+
+[[redirects]]
+from = "/recaps/*"
+to = "/index.html"
+status = 200
