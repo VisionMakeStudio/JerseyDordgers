@@ -1,0 +1,26 @@
+/* Mobile header scorecards: compact content, no empty tail after the score. */
+@media (max-width: 700px) {
+  #ticker .score-card {
+    flex: 0 0 168px !important;
+    width: 168px !important;
+    min-width: 168px !important;
+    max-width: 168px !important;
+  }
+
+  #ticker .score-card > span {
+    width: 100% !important;
+    max-width: 100% !important;
+    grid-template-columns: 19px minmax(0, 98px) minmax(18px, 1fr) !important;
+    column-gap: 4px !important;
+  }
+
+  #ticker .score-card > span > b {
+    width: 98px !important;
+    min-width: 0 !important;
+  }
+
+  #ticker .score-card > span > strong {
+    justify-self: end !important;
+    text-align: right !important;
+  }
+}
