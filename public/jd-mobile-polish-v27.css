@@ -1,0 +1,29 @@
+/* Jersey Dodgers V27 — mobile score-strip + Graphic Studio preview polish */
+@media(max-width:700px){
+  /* One complete score card must fit inside the phone; swiping is only between games. */
+  #ticker .ticker-wrap{overflow:hidden}
+  #ticker .score-track{box-sizing:border-box;width:100%;max-width:100%;padding:7px 8px!important;gap:7px!important;scroll-padding-inline:8px}
+  #ticker .score-card{box-sizing:border-box;flex:0 0 calc(100vw - 16px)!important;width:calc(100vw - 16px)!important;max-width:calc(100vw - 16px)!important;min-width:0!important;min-height:0!important;padding:8px 10px!important;border-radius:5px!important;scroll-snap-align:start}
+  #ticker .score-card>small{display:flex!important;align-items:center;gap:4px;margin:0 0 5px!important;font-size:7px!important;line-height:1.05!important;white-space:nowrap}
+  #ticker .score-card>span{display:grid!important;grid-template-columns:23px minmax(0,1fr) auto!important;align-items:center!important;gap:6px!important;min-width:0!important;min-height:25px!important;height:25px!important;padding:0!important}
+  #ticker .score-card .mark,#ticker .score-card .monogram,#ticker .score-card img{width:23px!important;height:23px!important;min-width:23px!important}
+  #ticker .score-card>span>b{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:10px!important;line-height:1!important}
+  #ticker .score-card>span>strong{justify-self:end!important;margin:0!important;padding-left:4px!important;font-size:15px!important;line-height:1!important;font-variant-numeric:tabular-nums}
+  #ticker .score-dots{margin-top:2px!important}
+
+  /* Larger mobile live poster while keeping the sticky editor/tabs workflow. */
+  body.jd-graphic-active .jd-graphic-stage-wrap{padding:5px 6px 0!important;gap:4px!important}
+  body.jd-graphic-active .jd-graphic-stage-head{min-height:16px!important;margin-bottom:1px!important}
+  body.jd-graphic-active .jd-graphic-canvas-shell{width:min(72vw,calc(38dvh * .8))!important;max-width:330px!important;margin:0 auto!important}
+  body.jd-graphic-active .jd-mobile-tabs{padding:5px 0!important}
+}
+@media(max-width:420px){
+  #ticker .score-card{flex-basis:calc(100vw - 12px)!important;width:calc(100vw - 12px)!important;max-width:calc(100vw - 12px)!important;padding:7px 8px!important}
+  #ticker .score-track{padding-inline:6px!important}
+  body.jd-graphic-active .jd-graphic-canvas-shell{width:min(74vw,calc(39dvh * .8))!important}
+}
+
+/* PrimeTime schedule importer */
+.jd-v27-import-button{border-color:#247cc8!important;background:#0c3156!important}
+.jd-v27-import-form{display:grid;gap:13px}.jd-v27-import-form>label,.jd-v27-import-form details{display:grid;gap:6px}.jd-v27-import-form details{padding:11px;border:1px solid #2b425a;border-radius:7px;background:#0a1520}.jd-v27-import-form summary{cursor:pointer;color:#c9dbed;font-size:10px;font-weight:900}.jd-v27-import-form details p{margin:7px 0;color:#8197ad;font-size:9px}.jd-v27-import-form textarea{width:100%;box-sizing:border-box}.jd-v27-import-actions,.jd-v27-review-actions{display:flex;gap:8px;flex-wrap:wrap}.jd-v27-status{min-height:16px;color:#88a0b7;font-size:10px}.jd-v27-review{display:grid;gap:11px;margin-top:10px;padding-top:12px;border-top:1px solid #294058}.jd-v27-review-head{display:flex;align-items:end;justify-content:space-between;gap:12px}.jd-v27-review-head h3{margin:3px 0 4px}.jd-v27-review-head p{margin:0;color:#8499b0;font-size:10px}.jd-v27-review-head label{display:grid;gap:4px;min-width:170px;color:#8ca1b8;font-size:9px;font-weight:900;text-transform:uppercase}.jd-v27-review-table{overflow:auto;max-height:420px;border:1px solid #294058;border-radius:7px;background:#0a141f}.jd-v27-review-table table{min-width:940px}.jd-v27-review-table th,.jd-v27-review-table td{padding:8px;vertical-align:top}.jd-v27-review-table td>strong{display:block;margin-bottom:5px;color:#eef6ff;font-size:10px}.jd-v27-review-table select{min-width:180px;min-height:32px;font-size:10px}.jd-v27-type{display:inline-flex;padding:3px 6px;border-radius:999px;border:1px solid #35516d;background:#112236;color:#a8c9e8;font-size:8px;font-weight:900;white-space:nowrap}.jd-v27-type.dh{border-color:#277fc8;background:#0c3156;color:#a9d5ff}
+@media(max-width:700px){.jd-v27-review-head{align-items:stretch;flex-direction:column}.jd-v27-review-head label{min-width:0}.jd-v27-import-actions,.jd-v27-review-actions{display:grid;grid-template-columns:1fr 1fr}.jd-v27-import-actions button,.jd-v27-review-actions button{width:100%}}
