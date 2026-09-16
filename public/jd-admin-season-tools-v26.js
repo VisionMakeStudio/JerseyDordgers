@@ -3,7 +3,7 @@
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const GC_STANDINGS='https://web.gc.com/organizations/YqyauzFQAj2U/home';
-  let frame=0,lastSection='',dataCache=null,cacheAt=0;
+  let frame=0,lastSection='',dataCache=null,cacheAt=0,pendingStandingsContent=null;
 
   function style(){
     if($('#jd-v26-admin-style'))return;
@@ -48,10 +48,60 @@
 
   function associatedTeams(data,sid){const ids=new Set();for(const s of data.standings||[])if(s.season===sid)ids.add(String(s.team));return ids}
   async function enhanceTeams(){
-    const root=$('#section-content');if(!root||document.body.dataset.adminSection!=='teams'||$('.jd-v26-season-context',root))return;const payload=await adminData();if(document.body.dataset.adminSection!=='teams'||root!==$('#section-content'))return;const data=payload.data,sid=currentSeasonId(data),toolbar=$('.list-toolbar',root);if(!toolbar)return;
-    const bar=document.createElement('div');bar.className='jd-v26-season-context';bar.innerHTML=`<div><span class="eyebrow">OPPONENTS BY SEASON</span><strong id="jd-v26-team-season-name"></strong><small>Saved team profiles are permanent. This season view stays empty until teams are imported/assigned through that season’s standings. Returning opponents reuse the same saved profile and logo.</small></div><label>Season<select id="jd-v26-team-season">${seasonOptions(data,sid)}</select></label>`;toolbar.parentNode.insertBefore(bar,toolbar);const allToggle=document.createElement('button');allToggle.type='button';allToggle.className='jd-v26-secondary';allToggle.textContent='Show all saved teams';toolbar.append(allToggle);let showAll=false;
-    const paint=()=>{const selected=$('#jd-v26-team-season').value;sessionStorage.setItem('jd-v26-season',selected);const season=data.seasons.find(s=>s.id===selected);$('#jd-v26-team-season-name').textContent=season?.name||'Season';const associated=associatedTeams(data,selected);let visible=0;$$('.admin-row',root).forEach(row=>{const id=$('[data-edit]',row)?.dataset.edit||'',show=showAll||associated.has(String(id));row.hidden=!show;row.style.display=show?'':'none';if(show)visible++});let empty=$('#jd-v32-team-empty',root);if(!empty){empty=document.createElement('p');empty.id='jd-v32-team-empty';empty.className='empty';$('#item-list',root)?.insertAdjacentElement('afterend',empty)}empty.hidden=showAll||visible>0;empty.style.display=(showAll||visible>0)?'none':'';empty.textContent=`No opponents assigned to ${season?.name||'this season'} yet. Import that season’s standings to add them. Saved profiles are still available under “Show all saved teams.”`;allToggle.textContent=showAll?'Show season teams only':'Show all saved teams'};
-    $('#jd-v26-team-season').onchange=paint;allToggle.onclick=()=>{showAll=!showAll;paint()};paint();
+    const root=$('#section-content');
+    if(!root||document.body.dataset.adminSection!=='teams')return;
+    const toolbar=$('.list-toolbar',root);
+    if(!toolbar)return;
+    const contexts=$$('.jd-v26-season-context',root);
+    const toggles=$$('.jd-v26-secondary',toolbar);
+    if(contexts.length===1&&toggles.length===1)return;
+    contexts.forEach(node=>node.remove());
+    toggles.forEach(node=>node.remove());
+    const local=window.JDAdminData?.();
+    const payload=local?{data:local}:await adminData();
+    if(document.body.dataset.adminSection!=='teams'||root!==$('#section-content')||
+      !toolbar.isConnected||$('.list-toolbar',root)!==toolbar||$('.jd-v26-season-context',root))return;
+    const data=payload.data,sid=currentSeasonId(data);
+    const bar=document.createElement('div');
+    bar.className='jd-v26-season-context';
+    bar.innerHTML=`<div><span class="eyebrow">OPPONENTS BY SEASON</span><strong id="jd-v26-team-season-name"></strong><small>Saved team profiles are permanent. This season view stays empty until teams are imported/assigned through that season’s standings. Returning opponents reuse the same saved profile and logo.</small></div><label>Season<select id="jd-v26-team-season">${seasonOptions(data,sid)}</select></label>`;
+    toolbar.before(bar);
+    const allToggle=document.createElement('button');
+    allToggle.type='button';
+    allToggle.className='jd-v26-secondary';
+    allToggle.textContent='Show all saved teams';
+    toolbar.append(allToggle);
+    const seasonSelect=$('#jd-v26-team-season',bar),seasonName=$('#jd-v26-team-season-name',bar);
+    let showAll=false;
+    const paint=()=>{
+      if(!bar.isConnected||!toolbar.isConnected||document.body.dataset.adminSection!=='teams')return;
+      const selected=seasonSelect.value;
+      sessionStorage.setItem('jd-v26-season',selected);
+      const season=data.seasons.find(s=>s.id===selected);
+      seasonName.textContent=season?.name||'Season';
+      const associated=associatedTeams(data,selected);
+      let visible=0;
+      $$('.admin-row',root).forEach(row=>{
+        const id=$('[data-edit]',row)?.dataset.edit||'',show=showAll||associated.has(String(id));
+        row.hidden=!show;
+        row.style.display=show?'':'none';
+        if(show)visible++;
+      });
+      let empty=$('#jd-v32-team-empty',root);
+      if(!empty){
+        empty=document.createElement('p');
+        empty.id='jd-v32-team-empty';
+        empty.className='empty';
+        $('#item-list',root)?.insertAdjacentElement('afterend',empty);
+      }
+      empty.hidden=showAll||visible>0;
+      empty.style.display=(showAll||visible>0)?'none':'';
+      empty.textContent=`No opponents assigned to ${season?.name||'this season'} yet. Import that season’s standings to add them. Saved profiles are still available under “Show all saved teams.”`;
+      allToggle.textContent=showAll?'Show season teams only':'Show all saved teams';
+    };
+    seasonSelect.onchange=paint;
+    allToggle.onclick=()=>{showAll=!showAll;paint()};
+    paint();
   }
 
   function standingRowHtml(row,data,index){const teamOpts=[...data.teams].sort((a,b)=>a.name.localeCompare(b.name)).map(t=>`<option value="${esc(t.id)}" ${t.id===row.team?'selected':''}>${esc(t.name)}</option>`).join('');return `<tr data-standing-row="${index}"><td><select class="team-select" data-k="team">${teamOpts}</select></td>${['w','l','t','pct','gb','rs','ra','streak','home','away'].map(k=>`<td><input data-k="${k}" value="${esc(row[k]??'')}"></td>`).join('')}<td><button type="button" data-remove-standing>×</button></td></tr>`}
@@ -67,13 +117,13 @@
   }
   function reviewHtml(rows,data){return `<div class="jd-v26-review-table"><table><thead><tr><th>Detected team / match</th><th>W</th><th>L</th><th>T</th><th>PCT</th><th>GB</th><th>RS</th><th>RA</th><th>STRK</th><th>HOME</th><th>AWAY</th></tr></thead><tbody>${rows.map((r,i)=>`<tr data-review-row="${i}" data-name="${esc(r.name)}"><td><div><span class="jd-v26-badge ${r.matched?'':'new'}">${r.matched?'MATCHED':'REVIEW'}</span> <strong>${esc(r.name)}</strong></div><select data-match><option value="__create__">Create new team profile</option>${[...data.teams].sort((a,b)=>a.name.localeCompare(b.name)).map(t=>`<option value="${esc(t.id)}" ${t.id===r.matched?'selected':''}>${esc(t.name)}</option>`).join('')}</select></td>${['w','l','t','pct','gb','rs','ra','streak','home','away'].map(k=>`<td><input data-k="${k}" value="${esc(r[k]??'')}"></td>`).join('')}</tr>`).join('')}</tbody></table></div>`}
   async function enhanceStandings(){
-    const root=$('#section-content');if(!root||document.body.dataset.adminSection!=='standings'||$('.jd-v26-standings',root))return;const payload=await adminData(true);if(document.body.dataset.adminSection!=='standings'||root!==$('#section-content'))return;const data=payload.data,sid=currentSeasonId(data),seasonRows=data.standings.filter(s=>s.season===sid).sort((a,b)=>a.order-b.order);root.innerHTML=`<section class="jd-v26-standings"><div class="jd-v26-standings-head"><div><span class="eyebrow">SEASONS & STATS</span><h2>Standings manager</h2><p>Keep each league table separated by season. Fall is shown before Spring for the same year.</p></div><label>Season<select id="jd-v26-standing-season">${seasonOptions(data,sid)}</select></label></div><div class="jd-v26-source"><input id="jd-v26-standing-source" type="url" value="${esc(seasonRows.find(r=>/^https:\/\//.test(r.source||''))?.source||GC_STANDINGS)}" placeholder="GameChanger standings link"><a class="button" id="jd-v26-open-source" href="${esc(GC_STANDINGS)}" target="_blank" rel="noopener">Open GameChanger</a></div><div class="jd-v26-actions"><button class="button" id="jd-v26-add-standing" type="button">+ Add team row</button><button class="jd-v26-secondary" id="jd-v26-save-standings" type="button">Save & publish standings</button></div><div class="jd-v26-standing-table"><table><thead><tr><th>Team</th><th>W</th><th>L</th><th>T</th><th>PCT</th><th>GB</th><th>RS</th><th>RA</th><th>STRK</th><th>HOME</th><th>AWAY</th><th></th></tr></thead><tbody id="jd-v26-standing-body">${seasonRows.map((r,i)=>standingRowHtml(r,data,i).replace(`data-standing-row="${i}"`,`data-standing-row="${i}" data-id="${esc(r.id)}"`)).join('')}</tbody></table></div><section class="jd-v26-import" id="jd-v30-standings-host"><h3>PrimeTime standings PDF</h3><p>Loading the PDF standings importer…</p></section></section>`;
+    const root=$('#section-content');if(!root||document.body.dataset.adminSection!=='standings'||$('.jd-v26-standings',root))return;const content=root.firstElementChild;if(!content||pendingStandingsContent===content)return;pendingStandingsContent=content;const local=window.JDAdminData?.();const payload=local?{data:local}:await adminData(true).catch(error=>{if(document.body.dataset.adminSection==='standings'&&root.firstElementChild===content){content.textContent=error?.message||'Standings could not load.';content.classList.add('is-error')}return null});if(pendingStandingsContent===content)pendingStandingsContent=null;if(!payload||document.body.dataset.adminSection!=='standings'||root!==$('#section-content')||root.firstElementChild!==content||$('.jd-v26-standings',root))return;const data=payload.data,sid=currentSeasonId(data),seasonRows=data.standings.filter(s=>s.season===sid).sort((a,b)=>a.order-b.order);root.innerHTML=`<section class="jd-v26-standings"><div class="jd-v26-standings-head"><div><span class="eyebrow">SEASONS & STATS</span><h2>Standings manager</h2><p>Keep each league table separated by season. Fall is shown before Spring for the same year.</p></div><label>Season<select id="jd-v26-standing-season">${seasonOptions(data,sid)}</select></label></div><div class="jd-v26-source"><input id="jd-v26-standing-source" type="url" value="${esc(seasonRows.find(r=>/^https:\/\//.test(r.source||''))?.source||GC_STANDINGS)}" placeholder="GameChanger standings link"><a class="button" id="jd-v26-open-source" href="${esc(GC_STANDINGS)}" target="_blank" rel="noopener">Open GameChanger</a></div><div class="jd-v26-actions"><button class="button" id="jd-v26-add-standing" type="button">+ Add team row</button><button class="jd-v26-secondary" id="jd-v26-save-standings" type="button">Save & publish standings</button></div><div class="jd-v26-standing-table"><table><thead><tr><th>Team</th><th>W</th><th>L</th><th>T</th><th>PCT</th><th>GB</th><th>RS</th><th>RA</th><th>STRK</th><th>HOME</th><th>AWAY</th><th></th></tr></thead><tbody id="jd-v26-standing-body">${seasonRows.map((r,i)=>standingRowHtml(r,data,i).replace(`data-standing-row="${i}"`,`data-standing-row="${i}" data-id="${esc(r.id)}"`)).join('')}</tbody></table></div><section class="jd-v26-import" id="jd-v30-standings-host"><h3>PrimeTime standings PDF</h3><p>Loading the PDF standings importer…</p></section></section>`;
     const body=$('#jd-v26-standing-body');
     const wireRemoves=()=>$$('[data-remove-standing]',body).forEach(b=>b.onclick=()=>b.closest('tr').remove());wireRemoves();
     $('#jd-v26-add-standing').onclick=()=>{const i=$$('[data-standing-row]',body).length;body.insertAdjacentHTML('beforeend',standingRowHtml(blankStanding(data,$('#jd-v26-standing-season').value),data,i));wireRemoves()};
     $('#jd-v26-standing-season').onchange=e=>{sessionStorage.setItem('jd-v26-season',e.target.value);reloadTo('standings')};
     $('#jd-v26-save-standings').onclick=async()=>{const button=$('#jd-v26-save-standings'),selected=$('#jd-v26-standing-season').value,source=$('#jd-v26-standing-source').value.trim(),rows=readStandingRows(body,data,selected,source);button.disabled=true;button.textContent='Saving…';try{await publish(d=>{d.standings=d.standings.filter(s=>s.season!==selected);d.standings.push(...rows)},'Standings published.');reloadTo('standings')}catch(err){const target=$('#jd-v26-standing-progress')||$('#status');if(target)target.textContent=err.message;button.disabled=false;button.textContent='Save & publish standings'}};
-    const mountPdfImporter=(attempt=0)=>{if(document.body.dataset.adminSection!=='standings'||root!==$('#section-content'))return;if(typeof window.JDStandingsPdfMount==='function'){window.JDStandingsPdfMount();if($('#jd-v30-pdf',root))return}if(attempt===0&&!document.querySelector('script[data-jd-v32-standings-loader]')){const script=document.createElement('script');script.dataset.jdV32StandingsLoader='1';script.src='/jd-admin-standings-pdf-v30.js?v=32';script.onload=()=>mountPdfImporter(attempt+1);document.head.append(script)}if(attempt<40)setTimeout(()=>mountPdfImporter(attempt+1),100);else{const host=$('#jd-v30-standings-host',root);if(host)host.innerHTML='<h3>PrimeTime standings PDF</h3><p>The PDF importer did not load. Refresh the Admin page once and try again.</p>'}};mountPdfImporter();
+    const standingsView=$('.jd-v26-standings',root);const mountPdfImporter=(attempt=0)=>{if(document.body.dataset.adminSection!=='standings'||root!==$('#section-content')||!standingsView?.isConnected)return;if(typeof window.JDStandingsPdfMount==='function'){window.JDStandingsPdfMount();if($('#jd-v30-pdf',root))return}if(attempt===0&&!document.querySelector('script[src*="jd-admin-standings-pdf-v30.js"]')){const script=document.createElement('script');script.dataset.jdV32StandingsLoader='1';script.src='/jd-admin-standings-pdf-v30.js?v=36';script.onload=()=>mountPdfImporter(attempt+1);document.head.append(script)}if(attempt<40)setTimeout(()=>mountPdfImporter(attempt+1),100);else{const host=$('#jd-v30-standings-host',root);if(host)host.innerHTML='<h3>PrimeTime standings PDF</h3><p>The PDF importer did not load. Refresh the Admin page once and try again.</p>'}};mountPdfImporter();
   }
 
   function apply(){style();const section=document.body.dataset.adminSection||'';lastSection=section;if(section==='games')enhanceGames();if(section==='teams')enhanceTeams();if(section==='standings')enhanceStandings();}

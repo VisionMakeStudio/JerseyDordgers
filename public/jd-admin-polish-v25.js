@@ -22,7 +22,7 @@
   function decorateRoster(){
     const list=$('.jd-season-player-list');if(!list)return;
     const rows=$$('.jd-season-player-row',list),manager=rows.find(managerRow);if(!manager)return;
-    list.prepend(manager);
+    if(list.firstElementChild!==manager)list.prepend(manager);
     const name=$('.jd-season-player-copy strong',manager);if(name&&!$('.jd-manager-badge',name.parentElement)){const badge=document.createElement('span');badge.className='jd-manager-badge';badge.textContent='MANAGER';name.insertAdjacentElement('afterend',badge)}
   }
   function restorePlayerButton(form,error=false){
@@ -66,7 +66,9 @@
   function schedule(){cancelAnimationFrame(frame);frame=requestAnimationFrame(enhance)}
   document.addEventListener('jd-admin-render',schedule);
   document.addEventListener('click',e=>{if(e.target.closest('#bulk-media'))setTimeout(enhanceBulkGallery,0)});
-  new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
+  const adminRoot=$('#admin-root'),editorContent=$('#editor-content');
+  if(adminRoot)new MutationObserver(schedule).observe(adminRoot,{childList:true,subtree:true});
+  if(editorContent)new MutationObserver(schedule).observe(editorContent,{childList:true,subtree:true});
   const status=$('#status');if(status)new MutationObserver(statusChanged).observe(status,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
   schedule();
 })();

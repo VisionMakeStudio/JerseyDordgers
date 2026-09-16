@@ -1,7 +1,7 @@
 (() => {
   'use strict';
   const $=(s,r=document)=>r.querySelector(s);
-  let navToken=0, sectionObserver=null, observedSection=null, editorObserver=null, observedEditor=null;
+  let navToken=0, renderSequence=0, sectionObserver=null, observedSection=null, editorObserver=null, observedEditor=null;
 
   function currentSection(){return window.JDAdminSection?.()||document.body.dataset.adminSection||''}
   function emitRender(){
@@ -12,12 +12,15 @@
   }
   function scheduleRemount(){
     const token=++navToken;
-    for(const delay of [0,70,220])setTimeout(()=>{
+    const seen=renderSequence;
+    setTimeout(()=>{
       if(token!==navToken)return;
-      emitRender();
       mountObservers();
       mountGameTypeEditor();
-    },delay);
+      // The base Admin emits this event after changing sections. Only send a
+      // fallback when a click did not produce that render.
+      if(renderSequence===seen)emitRender();
+    },220);
   }
 
   function mountObservers(){
@@ -86,7 +89,7 @@
     if(e.target.closest('[data-admin-group],[data-section]'))scheduleRemount();
     if(e.target.closest('[data-edit]'))setTimeout(mountGameTypeEditor,0);
   },true);
-  document.addEventListener('jd-admin-render',()=>{style();mountObservers();mountGameTypeEditor()});
+  document.addEventListener('jd-admin-render',()=>{renderSequence++;style();mountObservers();mountGameTypeEditor()});
   document.addEventListener('DOMContentLoaded',()=>{style();mountObservers();setTimeout(scheduleRemount,180)});
   setTimeout(()=>{style();mountObservers();mountGameTypeEditor()},450);
 })();

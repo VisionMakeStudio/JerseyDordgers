@@ -80,6 +80,9 @@
     const input=$('#jd-v30-pdf'),fileLabel=$('#jd-v30-file'),status=$('#jd-v30-status'),bar=$('#jd-v30-bar'),review=$('#jd-v30-review');input.onchange=()=>{fileLabel.textContent=input.files[0]?.name||'No file selected';review.innerHTML='';bar.style.width='0';status.textContent=''};
     $('#jd-v30-read').onclick=async()=>{const file=input.files[0],button=$('#jd-v30-read');if(!file){status.textContent='Choose the PrimeTime standings PDF first.';return}if(file.type&&file.type!=='application/pdf'&&!/\.pdf$/i.test(file.name)){status.textContent='Choose a PDF file.';return}button.disabled=true;button.textContent='Reading…';review.innerHTML='';bar.style.width='0';try{const payload=await api('/api/admin/content'),data=payload.data,result=await parseStandingsPdf(file,status,bar),selected=$('#jd-v26-standing-season')?.value||data.settings.currentSeason||sortSeasons(data.seasons)[0]?.id||'';reviewState={result,data};review.innerHTML=reviewHtml(result,data,selected);status.textContent=`Detected ${result.rows.length} teams. Review the names, stats and new-team logo crops.`;$('#jd-v30-back').onclick=()=>{review.innerHTML='';bar.style.width='0';status.textContent='';reviewState=null};$('#jd-v30-apply').onclick=()=>applyStandings(result,data)}catch(err){status.textContent=err.message;bar.style.width='0'}finally{button.disabled=false;button.textContent='Read standings PDF'}};
   }
-  function schedule(){cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{mount();setTimeout(mount,120);setTimeout(mount,350)})}
-  window.JDStandingsPdfMount=mount;document.addEventListener('jd-admin-render',schedule);document.addEventListener('DOMContentLoaded',()=>{setTimeout(schedule,120);setTimeout(schedule,450);setTimeout(schedule,1200)});let tries=0;const timer=setInterval(()=>{mount();if($('#jd-v30-pdf')||tries++>80)clearInterval(timer)},125);
+  function schedule(){cancelAnimationFrame(frame);frame=requestAnimationFrame(mount)}
+  window.JDStandingsPdfMount=mount;
+  document.addEventListener('jd-admin-render',schedule);
+  document.addEventListener('DOMContentLoaded',schedule);
+  schedule();
 })();
