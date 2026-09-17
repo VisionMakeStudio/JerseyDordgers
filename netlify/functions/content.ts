@@ -1,6 +1,7 @@
 import {getStore,getDeployStore} from '@netlify/blobs';
 import {getUser,admin,verifyRequestOrigin} from '@netlify/identity';
 import {contentSchema,publicContent} from '../../src/schema.mjs';
+import {rankStandings,syncStandings} from '../../src/standings.mjs';
 import seed from '../../seed.json';
 
 const rolesFor=(user:any)=>[...(Array.isArray(user?.roles)?user.roles:[]),...(Array.isArray(user?.appMetadata?.roles)?user.appMetadata.roles:[]),...(user?.role?[user.role]:[])];
@@ -33,7 +34,8 @@ export default async(req,context)=>{
 
   if(req.method==='GET'){
    const record=await store.get('published',{type:'json'});
-   return respond(record?{...record,data:contentSchema.parse(record.data)}:{revision:'initial',data:contentSchema.parse(seed)});
+   const data=contentSchema.parse(record?.data||seed);
+   return respond(record?{...record,data:{...data,standings:rankStandings(data.standings)}}:{revision:'initial',data:{...data,standings:rankStandings(data.standings)}});
   }
 
   if(req.method!=='PUT')return respond({error:'Method not allowed'},405);
@@ -56,14 +58,18 @@ export default async(req,context)=>{
    const previous=contentSchema.parse(before?.data||seed);
    for(const key of Object.keys(result.data)){
     if(key==='media'||key==='channels')continue;
-    if(!same((previous as any)[key],(result.data as any)[key])){
+    const priorValue=key==='standings'?rankStandings(previous.standings):(previous as any)[key];
+    if(!same(priorValue,(result.data as any)[key])){
      return respond({error:'Your Media access can only change photos, videos and Watch & Follow links.'},403);
     }
    }
   }
 
+  const previous=contentSchema.parse(before?.data||seed);
+  const updated=syncStandings(previous,result.data,before?.standingsGameResults);
+  const parsed=contentSchema.parse(updated.data);
   if(before)await store.setJSON('history/'+before.revision,before);
-  const record={revision:crypto.randomUUID(),updatedAt:new Date().toISOString(),data:result.data};
+  const record={revision:crypto.randomUUID(),updatedAt:new Date().toISOString(),data:parsed,standingsGameResults:updated.appliedResults};
   await store.setJSON('published',record);
   return respond(record);
  }catch(e:any){

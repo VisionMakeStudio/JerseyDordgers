@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {rankStandings} from './standings.mjs';
 const text=z.string().max(10000), short=z.string().max(300), id=z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/);
 const link=z.string().max(2000).refine(v=>!v||/^https:\/\//i.test(v),'Use an https:// link');
 const image=z.string().max(2000).refine(v=>!v||/^\/assets\/[a-zA-Z0-9_.-]+$/.test(v)||/^\/api\/images\/[a-zA-Z0-9_.-]+$/.test(v),'Choose an uploaded image');
@@ -82,5 +83,5 @@ export function canEdit(user,adminEmail){
 export function publicContent(data){
  const normalized=contentSchema.parse(data);
  const {jerseyRecords,...safe}=normalized;
- return {...safe,gameRecaps:normalized.gameRecaps.filter(x=>x.published),rosters:normalized.rosters.map(({source,...roster})=>roster),playoffRosters:normalized.playoffRosters.map(({source,...roster})=>roster),media:normalized.media.filter(x=>x.published),channels:normalized.channels.filter(x=>x.active),sponsors:normalized.sponsors.filter(x=>x.active),weeklyAwards:normalized.weeklyAwards.filter(x=>x.published),spotlights:normalized.spotlights.filter(x=>x.published)};
+ return {...safe,standings:rankStandings(normalized.standings),gameRecaps:normalized.gameRecaps.filter(x=>x.published),rosters:normalized.rosters.map(({source,...roster})=>roster),playoffRosters:normalized.playoffRosters.map(({source,...roster})=>roster),media:normalized.media.filter(x=>x.published),channels:normalized.channels.filter(x=>x.active),sponsors:normalized.sponsors.filter(x=>x.active),weeklyAwards:normalized.weeklyAwards.filter(x=>x.published),spotlights:normalized.spotlights.filter(x=>x.published)};
 }
