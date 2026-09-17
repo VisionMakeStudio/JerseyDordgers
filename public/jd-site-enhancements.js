@@ -165,6 +165,8 @@
   }
 
   function itemForCard(card) {
+    const id = card.dataset.mediaId;
+    if (id && mediaById.has(String(id))) return mediaById.get(String(id));
     const title = card.querySelector('.media-copy h3')?.textContent?.trim();
     if (!title) return null;
     return media.find(item => item.title === title) || null;
@@ -220,63 +222,15 @@
 
   function buildDirectVideoStage(video) {
     if (!(video instanceof HTMLVideoElement)) return null;
-
     const existing = video.closest('.jd-video-stage');
     if (existing) return existing;
-
     const stage = document.createElement('div');
     stage.className = 'jd-video-stage jd-direct-video-stage';
-
-    const parent = video.parentNode;
-    parent.insertBefore(stage, video);
+    video.parentNode.insertBefore(stage, video);
     stage.append(video);
-
     video.classList.add('jd-video-main');
-
-    const backdrop = video.cloneNode(false);
-    backdrop.className = 'jd-video-backdrop';
-    backdrop.removeAttribute('controls');
-    backdrop.controls = false;
-    backdrop.muted = true;
-    backdrop.defaultMuted = true;
-    backdrop.autoplay = true;
-    backdrop.loop = true;
-    backdrop.playsInline = true;
-    backdrop.preload = 'metadata';
-    backdrop.tabIndex = -1;
-    backdrop.setAttribute('aria-hidden', 'true');
-    backdrop.setAttribute('muted', '');
-    backdrop.setAttribute('autoplay', '');
-    backdrop.setAttribute('loop', '');
-    backdrop.setAttribute('playsinline', '');
-
-    stage.insertBefore(backdrop, video);
-
-    const playBoth = () => {
-      video.muted = true;
-      backdrop.muted = true;
-      video.play().catch(() => {});
-      backdrop.play().catch(() => {});
-    };
-
-    video.addEventListener('play', () => {
-      if (Math.abs((backdrop.currentTime || 0) - (video.currentTime || 0)) > .35) {
-        try { backdrop.currentTime = video.currentTime; } catch {}
-      }
-      backdrop.play().catch(() => {});
-    });
-
-    video.addEventListener('pause', () => backdrop.pause());
-    video.addEventListener('seeking', () => {
-      try { backdrop.currentTime = video.currentTime; } catch {}
-    });
-
-    if (video.readyState >= 2) playBoth();
-    else video.addEventListener('canplay', playBoth, { once: true });
-
     return stage;
   }
-
 
   function applyVideoFrame(stage, item) {
     if (!stage || !item) return;
@@ -285,6 +239,33 @@
     stage.style.setProperty('--jd-video-frame-zoom', frame.zoom);
     stage.style.setProperty('--jd-video-frame-x', `${frame.x}%`);
     stage.style.setProperty('--jd-video-frame-y', `${frame.y}%`);
+    const video = stage.querySelector('video.jd-video-main');
+    if (!video) return;
+    stage._jdSavedVideoFrame = frame;
+    const fit = () => {
+      const ratio = video.videoWidth / video.videoHeight;
+      const stageRatio = stage.clientWidth / stage.clientHeight;
+      if (!Number.isFinite(ratio) || !Number.isFinite(stageRatio) || ratio <= 0 || stageRatio <= 0) {
+        stage.style.setProperty('--jd-video-effective-zoom', 1);
+        return;
+      }
+      const fillZoom = Math.max(ratio / stageRatio, stageRatio / ratio);
+      const savedZoom = stage._jdSavedVideoFrame?.zoom || 1;
+      stage.style.setProperty('--jd-video-effective-zoom', Math.max(1, savedZoom / fillZoom).toFixed(3));
+    };
+    if (!stage._jdVideoFitReady) {
+      stage._jdVideoFitReady = true;
+      video.addEventListener('loadedmetadata', fit);
+      if (typeof ResizeObserver === 'function') {
+        const observer = new ResizeObserver(() => {
+          if (!stage.isConnected) { observer.disconnect(); return; }
+          fit();
+        });
+        observer.observe(stage);
+      }
+      else window.addEventListener('resize', fit, { passive: true });
+    }
+    fit();
   }
 
   function buildExternalVideoStage(frame) {
@@ -866,8 +847,26 @@
     wrap.querySelectorAll(':scope > .leader-grid,:scope > .note,:scope > .table-scroll,:scope > .empty,:scope > .jd-v11-stats-content').forEach(n=>n.remove());
     const group=currentStatsGroup(),items=visibleStatsForPhase(statsPhase),content=document.createElement('div');content.className='jd-v11-stats-content';content.innerHTML=`<div class="jd-v11-phase-label"><strong>${statsPhase==='playoffs'?'PLAYOFFS':'REGULAR SEASON'}</strong><span>${items.length} player stat line${items.length===1?'':'s'}</span></div>${items.length?(group!=='fielding'?leaderGridMarkup(items,group,statsPhase):'')+statsTableMarkup(items,group,statsPhase):'<div class="empty"><h3>Stats coming soon</h3><p>No '+(statsPhase==='playoffs'?'playoff':'regular-season')+' totals are saved for this season yet.</p></div>'}`;tabs.insertAdjacentElement('afterend',content);
   }
+  function homeLeaderMarkup(items){
+    const categories=[['AVG','BATTING AVERAGE'],['RBI','RUNS BATTED IN'],['H','HITS'],['SB','STOLEN BASES'],['HR','HOME RUNS']];
+    const leaders=categories.map(([key,label])=>{
+      const available=items.filter(s=>Number.isFinite(Number(s?.bat?.[key]))&&Number(s.bat[key])>0);
+      if(!available.length)return null;
+      const best=Math.max(...available.map(s=>Number(s.bat[key])));
+      const winners=available.filter(s=>Number(s.bat[key])===best),first=winners[0];
+      const playerItem=(siteData.players||[]).find(p=>String(p.id)===String(first.player));
+      return {key,label,first,playerItem,ties:winners.length-1};
+    }).filter(Boolean).slice(0,4);
+    if(!leaders.length)return '<div class="empty"><h3>Leaders coming soon</h3><p>Player leaders will appear as season stats are published.</p></div>';
+    return `<div class="jd-v36-leaderboard">${leaders.map(({key,label,first,playerItem,ties},index)=>`<a class="jd-v36-leader-row ${index===0?'is-feature':''}" href="/roster/${encodeURIComponent(first.player)}/?season=${encodeURIComponent(selectedSeasonId())}"><span class="jd-v36-leader-rank" aria-hidden="true">${String(index+1).padStart(2,'0')}</span>${leaderPhotoMarkup(playerItem)}<span class="jd-v36-leader-identity"><small>${label}${ties?` · ${ties+1} TIED`:''}</small><strong>${escapeHtml(playerItem?.name||'Player')}</strong><em>${escapeHtml(first.bat.PA||first.bat.AB||'0')} PA</em></span><b class="jd-v36-leader-value">${escapeHtml(first.bat[key])}</b></a>`).join('')}</div>`;
+  }
   function enhanceHomeLeaders(){
-    const route=location.pathname.split('/').filter(Boolean)[0]||'';if(route||!siteData)return;const head=[...document.querySelectorAll('#main .section-head')].find(h=>/team leaders/i.test(h.querySelector('h2')?.textContent||''));const section=head?.parentElement;if(!section)return;section.querySelectorAll(':scope > .leader-grid,:scope > .note,:scope > .jd-v11-leader-grid,:scope > .jd-v11-leader-note,:scope > .empty').forEach(n=>n.remove());const items=visibleStatsForPhase('regular');section.insertAdjacentHTML('beforeend',leaderGridMarkup(items,'bat','regular'));
+    const route=location.pathname.split('/').filter(Boolean)[0]||'';
+    if(route||!siteData)return;
+    const panel=document.querySelector('#main .home-leaders-panel');
+    if(!panel)return;
+    panel.querySelectorAll(':scope > .leader-grid,:scope > .note,:scope > .jd-v11-leader-grid,:scope > .jd-v11-leader-note,:scope > .jd-v36-leaderboard,:scope > .empty').forEach(n=>n.remove());
+    panel.insertAdjacentHTML('beforeend',homeLeaderMarkup(visibleStatsForPhase('regular')));
   }
 
   function redesignRosterCards() {
