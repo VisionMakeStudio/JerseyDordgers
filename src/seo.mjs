@@ -5,7 +5,7 @@ const xml=esc;
 const plain=value=>String(value??'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
 const absolute=path=>path?new URL(path,SITE_URL).href:'';
 const dateLabel=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(value||''))return value||'';return new Intl.DateTimeFormat('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'}).format(new Date(value+'T12:00:00Z'))};
-const defaultImage=data=>absolute(data.settings.shareImage||'/assets/jd-share-team-v40.png');
+const defaultImage=data=>absolute(data.settings.shareImage||'/assets/jd-share-team-v41.jpg');
 const staticPages={
  schedule:['Schedule & Scores','See upcoming Jersey Dodgers baseball games, opponents, dates, locations and final scores.','Schedule and scores'],
  scores:['Final Scores','Follow final Jersey Dodgers baseball scores and game results from the current season.','Final scores'],
@@ -76,6 +76,7 @@ export function seoHead(page,data){
   `<meta property="og:description" content="${esc(page.description)}">`,
   `<meta property="og:url" content="${esc(page.canonical)}">`,
   `<meta property="og:image" content="${esc(page.image)}">`,
+  page.image.endsWith("/assets/jd-share-team-v41.jpg")?'<meta property="og:image:type" content="image/jpeg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="627">':"",
   `<meta property="og:image:alt" content="${esc(data.settings.teamName+' team photo')}">`,
   `<meta name="twitter:card" content="summary_large_image">`,
   `<meta name="twitter:title" content="${esc(page.title)}">`,
