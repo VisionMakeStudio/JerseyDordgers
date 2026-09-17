@@ -848,17 +848,17 @@
     const group=currentStatsGroup(),items=visibleStatsForPhase(statsPhase),content=document.createElement('div');content.className='jd-v11-stats-content';content.innerHTML=`<div class="jd-v11-phase-label"><strong>${statsPhase==='playoffs'?'PLAYOFFS':'REGULAR SEASON'}</strong><span>${items.length} player stat line${items.length===1?'':'s'}</span></div>${items.length?(group!=='fielding'?leaderGridMarkup(items,group,statsPhase):'')+statsTableMarkup(items,group,statsPhase):'<div class="empty"><h3>Stats coming soon</h3><p>No '+(statsPhase==='playoffs'?'playoff':'regular-season')+' totals are saved for this season yet.</p></div>'}`;tabs.insertAdjacentElement('afterend',content);
   }
   function homeLeaderMarkup(items){
-    const categories=[['AVG','BATTING AVERAGE'],['RBI','RUNS BATTED IN'],['H','HITS'],['SB','STOLEN BASES'],['HR','HOME RUNS']];
-    const leaders=categories.map(([key,label])=>{
+    const categories=[['AVG','BATTING AVERAGE','BA'],['RBI','RUNS BATTED IN','RBI'],['H','HITS','H'],['SB','STOLEN BASES','SB'],['HR','HOME RUNS','HR']];
+    const leaders=categories.map(([key,label,code])=>{
       const available=items.filter(s=>Number.isFinite(Number(s?.bat?.[key]))&&Number(s.bat[key])>0);
       if(!available.length)return null;
       const best=Math.max(...available.map(s=>Number(s.bat[key])));
       const winners=available.filter(s=>Number(s.bat[key])===best),first=winners[0];
       const playerItem=(siteData.players||[]).find(p=>String(p.id)===String(first.player));
-      return {key,label,first,playerItem,ties:winners.length-1};
+      return {key,label,code,first,playerItem,ties:winners.length-1};
     }).filter(Boolean).slice(0,4);
     if(!leaders.length)return '<div class="empty"><h3>Leaders coming soon</h3><p>Player leaders will appear as season stats are published.</p></div>';
-    return `<div class="jd-v36-leaderboard">${leaders.map(({key,label,first,playerItem,ties},index)=>`<a class="jd-v36-leader-row ${index===0?'is-feature':''}" href="/roster/${encodeURIComponent(first.player)}/?season=${encodeURIComponent(selectedSeasonId())}"><span class="jd-v36-leader-rank" aria-hidden="true">${String(index+1).padStart(2,'0')}</span>${leaderPhotoMarkup(playerItem)}<span class="jd-v36-leader-identity"><small>${label}${ties?` · ${ties+1} TIED`:''}</small><strong>${escapeHtml(playerItem?.name||'Player')}</strong><em>${escapeHtml(first.bat.PA||first.bat.AB||'0')} PA</em></span><b class="jd-v36-leader-value">${escapeHtml(first.bat[key])}</b></a>`).join('')}</div>`;
+    return `<div class="jd-v36-leaderboard">${leaders.map(({key,label,code,first,playerItem,ties},index)=>`<a class="jd-v36-leader-row ${index===0?'is-feature':''}" href="/roster/${encodeURIComponent(first.player)}/?season=${encodeURIComponent(selectedSeasonId())}"><span class="jd-v36-leader-code" aria-hidden="true">${code}</span>${leaderPhotoMarkup(playerItem)}<span class="jd-v36-leader-identity"><small>${label}${ties?` · ${ties+1} TIED`:''}</small><strong>${escapeHtml(playerItem?.name||'Player')}</strong><em>${escapeHtml(first.bat.PA||first.bat.AB||'0')} PA</em></span><b class="jd-v36-leader-value">${escapeHtml(first.bat[key])}</b></a>`).join('')}</div>`;
   }
   function enhanceHomeLeaders(){
     const route=location.pathname.split('/').filter(Boolean)[0]||'';

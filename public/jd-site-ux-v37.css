@@ -1,0 +1,24 @@
+/* Use stat abbreviations instead of misleading 01–04 rankings. */
+.jd-v36-leader-row{grid-template-columns:42px 48px minmax(0,1fr) auto}
+.jd-v36-leader-code{display:block;align-self:center;color:#9fbad6;font:italic 21px/1 Impact,'Arial Narrow',sans-serif;letter-spacing:.02em;text-align:center;text-decoration:none}
+.jd-v36-leader-row.is-feature .jd-v36-leader-code{color:#c8e4ff}
+
+/* Keep the desktop panels level without leaving a tall blank standings panel. */
+@media(min-width:1001px){
+  .home-performance-grid{align-items:stretch}
+  .home-standings-panel,.home-leaders-panel{align-self:stretch;height:100%}
+  .home-leaders-panel{display:flex;flex-direction:column}
+  .home-leaders-panel .jd-v36-leaderboard{flex:1;grid-auto-rows:minmax(0,1fr)}
+  .home-leaders-panel .jd-v36-leader-row{grid-template-columns:42px 42px minmax(0,1fr) auto;gap:9px;min-height:56px;padding:5px 9px}
+  .home-leaders-panel .jd-v36-leader-row.is-feature{min-height:64px}
+  .home-leaders-panel .jd-v36-leader-row .jd-leader-visual{width:42px;height:44px}
+  .home-leaders-panel .jd-v36-leader-row.is-feature .jd-leader-visual{height:50px}
+  .home-leaders-panel .jd-v36-leader-identity strong{font-size:13px}
+  .home-leaders-panel .jd-v36-leader-value{font-size:29px}
+  .home-leaders-panel .jd-v36-leader-row.is-feature .jd-v36-leader-value{font-size:34px}
+}
+
+@media(max-width:700px){
+  .jd-v36-leader-row{grid-template-columns:34px 42px minmax(0,1fr) auto}
+  .jd-v36-leader-code{font-size:17px}
+}
