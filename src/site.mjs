@@ -73,7 +73,28 @@ const upcomingGames = (sid = season) => seasonGames(sid).filter(g => ['scheduled
 const pastGames = (sid = season) => seasonGames(sid).filter(g => !['scheduled', 'live'].includes(state(g))).reverse();
 const finals = (sid = season) => seasonGames(sid).filter(g => g.status === 'final').reverse();
 const recapFor = id => (data.gameRecaps || []).find(r => r.published && r.gameId === id);
-const recaps = () => (data.gameRecaps || []).filter(r => r.published).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+const recaps = () => (data.gameRecaps || []).filter(r => published(r)).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+function recapGame(r) { return data.games.find(x => x.id === r.gameId); }
+function stories() {
+  const groups = new Map();
+  recaps().forEach(r => {
+    const g = recapGame(r);
+    const key = g ? `${g.date}|${g.opponent}` : `${r.date}|${String(r.opponent || '').toLowerCase()}|${r.id}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  });
+  return [...groups.values()].map(list => {
+    list.sort((a, b) => (recapGame(a)?.time || '').localeCompare(recapGame(b)?.time || ''));
+    const games = list.map(recapGame);
+    if (list.length < 2) return {id: list[0].id, date: list[0].date, recaps: list, games, title: list[0].title, summary: list[0].summary, image: list[0].image};
+    const o = team(games[0]?.opponent)?.name || list[0].opponent || 'Opponent';
+    const res = games.map(g => g?.status === 'final' ? result(g) : '');
+    const scores = games.map(g => g ? `${Math.max(g.ourScore, g.theirScore)}–${Math.min(g.ourScore, g.theirScore)}` : '').filter(Boolean).join(' and ');
+    const title = res.every(x => x === 'W') ? `Dodgers sweep the ${o}` : res.every(x => x === 'L') ? `${o} take both games from the Dodgers` : `Dodgers split a doubleheader with the ${o}`;
+    return {id: list[0].id, date: list[0].date, recaps: list, games, title, summary: `Doubleheader · ${scores}`, image: list.find(r => r.image)?.image || '', doubleheader: true};
+  }).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+}
+const storyFor = id => stories().find(st => st.recaps.some(r => r.id === id));
 function standingRow(sid = season) { return data.standings.find(s => s.season === sid && s.team === us().id); }
 function recordText(sid = season) {
   const r = standingRow(sid);
@@ -138,7 +159,7 @@ function shell(route) {
   const cards = railCards();
   $('#rail').innerHTML = `<div class="wrap rail-in">
     <a class="rail-tag" href="/schedule/"><b>${esc(seasonName(s.currentSeason).replace(/^(\w+)\s20(\d\d)$/, "$1 '$2").toUpperCase())}</b><small>${esc(recordText(s.currentSeason))} · Scores</small></a>
-    <div class="rail-track" tabindex="0" aria-label="Scores and upcoming games">${cards.map(railCard).join('') || '<p class="rail-empty">The schedule will appear here once it is published.</p>'}</div>
+    <button class="rail-nav prev" type="button" aria-label="Earlier games" hidden>${ICON.prev}</button><div class="rail-track" tabindex="0" aria-label="Scores and upcoming games">${cards.map(railCard).join('') || '<p class="rail-empty">The schedule will appear here once it is published.</p>'}</div><button class="rail-nav next" type="button" aria-label="More games" hidden>${ICON.next}</button>
   </div>`;
   $('#header').innerHTML = `<div class="wrap mast-in">
     <a class="brand" href="/"><img src="${esc(s.logo)}" alt=""><b>${esc(s.teamName)}<small>Est. ${esc(s.founded)} · New Jersey</small></b></a>
@@ -164,7 +185,22 @@ function shell(route) {
   burger.onclick = () => { drawer.hidden = false; burger.setAttribute('aria-expanded', 'true'); document.body.classList.add('locked'); drawer.querySelector('nav a')?.focus(); };
   drawer.onclick = e => { if (e.target.closest('[data-close]') || e.target.closest('nav a')) closeDrawer(); };
   // keep the next game in view on narrow screens
-  const track = $('.rail-track'); if (track) track.scrollLeft = 0;
+  wireRail();
+}
+function wireRail() {
+  const track = $('.rail-track'), prev = $('.rail-nav.prev'), next = $('.rail-nav.next'); if (!track) return;
+  track.scrollLeft = 0;
+  const tag = $('.rail-tag'), inner = $('.rail-in');
+  const sync = () => { if (tag && inner) inner.style.setProperty('--rail-tag-w', (tag.offsetLeft + tag.offsetWidth) + 'px'); const max = track.scrollWidth - track.clientWidth - 2; prev.hidden = track.scrollLeft <= 2; next.hidden = track.scrollLeft >= max; };
+  prev.onclick = () => track.scrollBy({left: -track.clientWidth * 0.8, behavior: 'smooth'});
+  next.onclick = () => track.scrollBy({left: track.clientWidth * 0.8, behavior: 'smooth'});
+  track.addEventListener('scroll', sync, {passive: true});
+  track.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && track.scrollWidth > track.clientWidth) { const before = track.scrollLeft; track.scrollLeft += e.deltaY; if (track.scrollLeft !== before) e.preventDefault(); } }, {passive: false});
+  let drag = null;
+  track.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') return; drag = {x: e.clientX, left: track.scrollLeft, moved: false}; });
+  window.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x; if (Math.abs(dx) > 5) { drag.moved = true; track.classList.add('dragging'); } track.scrollLeft = drag.left - dx; });
+  window.addEventListener('pointerup', () => { if (drag?.moved) { track.addEventListener('click', ev => { ev.preventDefault(); ev.stopPropagation(); }, {capture: true, once: true}); } drag = null; track.classList.remove('dragging'); });
+  sync(); window.addEventListener('resize', sync);
 }
 function closeDrawer() { const d = $('#drawer'); if (!d || d.hidden) return; d.hidden = true; $('#burger')?.setAttribute('aria-expanded', 'false'); document.body.classList.remove('locked'); }
 
@@ -264,7 +300,7 @@ function videoTile(m, big = false) {
 }
 function ytId(url) { try { const u = new URL(url); if (u.hostname === 'youtu.be') return u.pathname.slice(1); if (/youtube\.com$/.test(u.hostname)) return u.searchParams.get('v') || (u.pathname.match(/\/(?:shorts|embed)\/([^/?]+)/) || [])[1] || ''; } catch {} return ''; }
 function photoTile(m, list, cls = '') {
-  return `<button class="ph-tile ${cls}" type="button" data-photo="${esc(m.id)}" data-list="${esc(list)}" aria-label="Open photo: ${esc(m.title)}"><img src="${esc(m.image)}" alt="" loading="lazy" style="${frame(m.caption)}"><span class="cap">${esc(m.title)}</span></button>`;
+  return `<button class="ph-tile ${cls}" type="button" data-photo="${esc(m.id)}" data-list="${esc(list)}" aria-label="Open photo: ${esc(m.title)}"><img src="${esc(m.image)}" alt="" loading="lazy" style="${frame(m.caption)}"></button>`;
 }
 function credits(list) {
   const names = new Map();
@@ -313,9 +349,10 @@ function lead(next, pair) {
 
 function headlines() {
   const out = [];
-  recaps().slice(0, 2).forEach(r => {
-    const g = data.games.find(x => x.id === r.gameId);
-    out.push({title: r.title, sub: `${r.summary && r.summary !== r.title ? r.summary + ' · ' : ''}${fmtDate(r.date, {month: 'short', day: 'numeric'})}`, href: `/recaps/${r.id}/`, tag: 'Recap', cls: g && g.status === 'final' ? (result(g) === 'W' ? 'w' : result(g) === 'L' ? 'l' : '') : ''});
+  stories().slice(0, 2).forEach(st => {
+    const res = st.games.filter(g => g?.status === 'final').map(result);
+    const cls = res.length && res.every(x => x === 'W') ? 'w' : res.length && res.every(x => x === 'L') ? 'l' : '';
+    out.push({title: st.title, sub: `${st.summary && st.summary !== st.title ? st.summary + ' · ' : ''}${fmtDate(st.date, {month: 'short', day: 'numeric'})}`, href: `/recaps/${st.id}/`, tag: st.doubleheader ? 'Doubleheader' : 'Recap', cls});
   });
   const award = (data.weeklyAwards || []).filter(a => published(a)).sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
   if (award) out.push({title: `${award.winners.map(w => player(w.player)?.name).filter(Boolean).join(' & ')} named ${award.title || 'Players of the Week'}`, sub: award.weekLabel || '', href: '/players-of-the-week/', tag: 'Award'});
@@ -449,12 +486,13 @@ function awardsSection() {
 }
 
 function mediaSection() {
-  const v = featured(videos())[0], ph = featured(photos()).slice(0, v ? 4 : 5);
+  const v = featured(videos()).find(x => x.video), ph = featured(photos()).slice(0, v ? 3 : 4);
   if (!v && !ph.length) return '';
-  const champ = data.settings.championshipImage;
+  const tile = (m, cls) => `<button class="col-tile ${cls}" type="button" data-photo="${esc(m.id)}" data-list="home" aria-label="Open photo"><img src="${esc(m.image)}" alt="" loading="lazy" style="${frame(m.caption)}"></button>`;
+  const vid = v ? `<a class="col-tile col-v" href="/videos/" aria-label="Watch: ${esc(v.title)}"><video src="${esc(v.video)}" ${v.image ? `poster="${esc(v.image)}"` : ''} autoplay muted loop playsinline preload="metadata" disablepictureinpicture style="${frame(v.caption, 'JD_VFRAME')}"></video></a>` : '';
   return `<section class="wrap sec">${secHead('Photos & Video', more('/media/', 'All media'))}
-    <div class="media-grid">${v ? videoTile(v, true) : ph.length ? photoTile(ph.shift(), 'home', 'big') : ''}${ph.map(m => photoTile(m, 'home')).join('')}</div>
-    ${credits([v, ...featured(photos()).slice(0, 5)].filter(Boolean))}
+    <div class="collage ${v ? '' : 'no-v'}">${vid}${ph.map((m, i) => tile(m, 'col-' + (i + 1))).join('')}</div>
+    ${credits([v, ...ph].filter(Boolean))}
   </section>`;
 }
 
@@ -477,8 +515,16 @@ function joinStrip() {
   return `<section class="wrap sec join">
     <div class="card jc blue"><span class="lbl">${esc(joinSeasons())}</span><h3>${esc(toTitle(s.tryoutsTitle || 'Join the team'))}</h3><p>${esc(s.tryoutsText || '')}</p><div><a class="btn white" href="/tryouts/">Apply to join</a></div></div>
     <div class="card jc"><span class="lbl">${sp.length > 1 ? 'Team sponsors' : 'Team sponsor'}</span><h3>${esc(toTitle(s.sponsorTitle || 'Back the Dodgers'))}</h3>${sp.map(x => `<a class="spons" ${safeUrl(x.link) ? `href="${esc(x.link)}" target="_blank" rel="noopener"` : ''}>${x.logo ? `<img src="${esc(x.logo)}" alt="" loading="lazy">` : ''}<div><b>${esc(x.name)}</b><small>${esc(x.description || x.buttonLabel || 'Proud sponsor')}</small></div></a>`).join('') || `<p>${esc(s.sponsorText || '')}</p>`}<div><button class="btn ghost" type="button" data-form="sponsor">Become a sponsor</button></div></div>
-    <div class="card jc"><span class="lbl">Follow</span><h3>Every inning</h3><div class="follow">${ch.map(c => `<a href="${esc(safeUrl(c.link) || '#')}" target="_blank" rel="noopener"><div><b>${esc(c.name)}</b><small>${esc(c.description || c.eyebrow || '')}</small></div><span class="dot" style="background:${esc(/^#[0-9a-f]{3,8}$/i.test(c.color) ? c.color : '#0E5CB8')}"></span></a>`).join('')}</div></div>
+    <div class="card jc"><span class="lbl">Follow</span><h3>Every inning</h3><div class="follow">${ch.map(c => `<a href="${esc(safeUrl(c.link) || '#')}" target="_blank" rel="noopener" style="--ch:${esc(/^#[0-9a-f]{3,8}$/i.test(c.color) ? c.color : '#0E5CB8')}"><span class="ch-logo">${channelLogo(c)}</span><div><b>${esc(c.name)}</b><small>${esc(c.description || c.eyebrow || '')}</small></div><span class="ch-go" aria-hidden="true">${ICON.next}</span></a>`).join('')}</div></div>
   </section>`;
+}
+function channelLogo(c) {
+  if (c.logo) return `<img src="${esc(c.logo)}" alt="" loading="lazy">`;
+  const k = `${c.id} ${c.name}`.toLowerCase();
+  if (k.includes('instagram')) return ICON.ig;
+  if (k.includes('youtube')) return ICON.yt;
+  if (k.includes('gamechanger')) return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5A5 5 0 1 0 17 13h-5"/></svg>';
+  return `<b>${esc(c.name.slice(0, 2).toUpperCase())}</b>`;
 }
 function joinSeasons() { const up = data.seasons.filter(x => x.status === 'active' || x.status === 'upcoming').map(x => x.name); return up.length ? up.join(' · ') : 'Tryouts'; }
 
@@ -517,29 +563,32 @@ function gamePage(id) {
 }
 
 /* ---------- STORIES ---------- */
-function recapCard(r) {
-  const g = data.games.find(x => x.id === r.gameId), res = g?.status === 'final' ? result(g) : '';
-  return `<a class="rc card" href="/recaps/${esc(r.id)}/">${r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy">` : ''}<div class="rc-tx"><div class="rc-meta"><span class="lbl">${esc(fmtDate(r.date))} · Recap</span>${has(r.ourScore) && has(r.theirScore) ? `<span class="pill ${res === 'W' ? 'w' : res === 'L' ? 'l' : ''}">${res ? res + ' ' : ''}${esc(r.ourScore)}-${esc(r.theirScore)}</span>` : ''}</div><h3>${esc(r.title)}</h3><p>${esc(firstPara(r))}</p></div></a>`;
+function storyCard(st) {
+  const scores = st.games.filter(g => g?.status === 'final').map(g => `<span class="pill ${result(g) === 'W' ? 'w' : result(g) === 'L' ? 'l' : ''}">${result(g)} ${g.ourScore}-${g.theirScore}</span>`).join('');
+  return `<a class="rc card" href="/recaps/${esc(st.id)}/">${st.image ? `<img src="${esc(st.image)}" alt="" loading="lazy">` : ''}<div class="rc-tx"><div class="rc-meta"><span class="lbl">${esc(fmtDate(st.date))} · ${st.doubleheader ? 'Doubleheader' : 'Recap'}</span><span class="rc-scores">${scores}</span></div><h3>${esc(st.title)}</h3><p>${esc(st.doubleheader ? st.recaps.map(r => r.title).join(' · ') : firstPara(st.recaps[0]))}</p></div></a>`;
+}
+function recapBody(r, g) {
+  const paras = String(r.body || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  return `${r.lineScore ? `<div class="card pad">${lineScoreFrom(r.lineScore, g)}</div>` : ''}
+      <div class="art-body">${paras.map(p => /^by /i.test(p) && p.length < 60 ? `<p class="byline">${esc(p)}</p>` : `<p>${lines(p)}</p>`).join('')}</div>
+      ${r.boxScore ? `<h2 class="sub-h">Box score</h2><div class="card pad">${pastedTable(r.boxScore)}</div>` : ''}`;
 }
 function recapsPage(id) {
-  const list = recaps();
+  const list = stories();
   if (id) {
-    const r = list.find(x => x.id === id); if (!r) return notFound('Story not found', 'This recap is unavailable.');
-    const g = data.games.find(x => x.id === r.gameId);
-    const paras = String(r.body || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+    const st = storyFor(id); if (!st) return notFound('Story not found', 'This recap is unavailable.');
+    const one = st.recaps.length === 1, r0 = st.recaps[0];
     return `<article class="wrap art">
       <a class="back" href="/recaps/">← All stories</a>
-      <span class="lbl">Game recap · ${esc(fmtDate(r.date, {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'}))}</span>
-      <h1>${esc(r.title)}</h1>
-      ${r.summary && r.summary !== r.title ? `<p class="dek">${esc(r.summary)}</p>` : ''}
-      ${r.image ? `<img class="art-img" src="${esc(r.image)}" alt="">` : ''}
-      ${r.lineScore ? `<div class="card pad">${lineScoreFrom(r.lineScore, g)}</div>` : ''}
-      <div class="art-body">${paras.map(p => /^by /i.test(p) && p.length < 60 ? `<p class="byline">${esc(p)}</p>` : `<p>${lines(p)}</p>`).join('')}</div>
-      ${r.boxScore ? `<h2 class="sub-h">Box score</h2><div class="card pad">${pastedTable(r.boxScore)}</div>` : ''}
-      <div class="row-btns">${g ? `<a class="btn ghost sm" href="/game/${esc(g.id)}/">Game Center</a>` : ''}${ext(r.source, 'View on GameChanger', 'btn ghost sm')}</div>
+      <span class="lbl">${st.doubleheader ? 'Doubleheader recap' : 'Game recap'} · ${esc(fmtDate(st.date, {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'}))}</span>
+      <h1>${esc(st.title)}</h1>
+      ${one ? (r0.summary && r0.summary !== r0.title ? `<p class="dek">${esc(r0.summary)}</p>` : '') : `<p class="dek">${esc(st.summary)}</p>`}
+      ${st.image ? `<img class="art-img" src="${esc(st.image)}" alt="">` : ''}
+      ${one ? recapBody(r0, st.games[0]) : st.recaps.map((r, i) => { const g = st.games[i]; return `<section class="dh-game"><div class="dh-head"><span class="lbl">Game ${i + 1}${g ? ' · ' + esc(fmtTime(g.time)) : ''}</span>${g?.status === 'final' ? `<span class="pill ${result(g) === 'W' ? 'w' : 'l'}">${result(g)} ${g.ourScore}-${g.theirScore}</span>` : ''}</div><h2 class="dh-title">${esc(r.title)}</h2>${recapBody(r, g)}</section>`; }).join('')}
+      <div class="row-btns">${st.games.filter(Boolean).map((g, i) => `<a class="btn ghost sm" href="/game/${esc(g.id)}/">Game Center${st.games.length > 1 ? ' · G' + (i + 1) : ''}</a>`).join('')}${st.recaps.filter(r => safeUrl(r.source)).slice(0, 1).map(r => ext(r.source, 'View on GameChanger', 'btn ghost sm')).join('')}</div>
     </article>`;
   }
-  return pageHead('Stories', 'Recaps and team news') + `<section class="wrap sec">${list.length ? `<div class="rc-grid">${list.map(recapCard).join('')}</div>` : empty('No stories yet', 'Game recaps will appear here.')}</section>`;
+  return pageHead('Stories', 'Recaps and team news') + `<section class="wrap sec">${list.length ? `<div class="rc-grid">${list.map(storyCard).join('')}</div>` : empty('No stories yet', 'Game recaps will appear here.')}</section>`;
 }
 
 /* ---------- STANDINGS ---------- */

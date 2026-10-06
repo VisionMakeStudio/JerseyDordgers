@@ -95,3 +95,82 @@ body[data-admin-section="dashboard"] .admin-help{display:none}
 .hq-sheet-f .form-message{margin:0 auto 0 0;color:var(--hq-warn);font-size:13px}
 .hq-sheet-f button{font-family:var(--hq-label)!important;font-weight:700!important;letter-spacing:.06em;text-transform:uppercase;border-radius:6px!important}
 .hq-sheet-f .button{background:var(--hq-blue)!important;border-color:var(--hq-blue)!important}
+
+/* Today: dismiss */
+.hq-todo-act{display:flex;align-items:center;gap:6px}
+#admin-shell .hq-dismiss{width:34px!important;min-width:34px!important;height:34px!important;min-height:34px!important;padding:0!important;border-radius:50%!important;border:1px solid transparent!important;background:transparent!important;color:var(--hq-muted)!important;font-size:20px!important;line-height:1!important}
+#admin-shell .hq-dismiss:hover{border-color:var(--hq-line)!important;color:#fff!important}
+.hq-hidden{padding:0 16px 14px;color:var(--hq-muted);font-size:12.5px;margin:0}
+#admin-shell .hq-link{background:none!important;border:0!important;padding:0!important;min-height:0!important;color:var(--hq-sky)!important;font:inherit!important;text-decoration:underline;cursor:pointer}
+@media (max-width:620px){.hq-todo-act{grid-column:2}}
+
+/* Games & Scores */
+body[data-admin-section="games"] .list-toolbar{display:flex!important;flex-wrap:wrap;gap:8px!important;align-items:center;background:transparent!important;border:0!important;padding:0!important}
+body[data-admin-section="games"] .list-toolbar>button,body[data-admin-section="games"] .list-toolbar>label>button{min-height:40px!important;padding:9px 14px!important;border-radius:6px!important;font:700 13px/1 var(--hq-label)!important;letter-spacing:.06em!important;text-transform:uppercase;background:transparent!important;border:1px solid var(--hq-line)!important;color:var(--hq-fg)!important;box-shadow:none!important}
+body[data-admin-section="games"] .list-toolbar>#add-item{background:var(--hq-blue)!important;border-color:var(--hq-blue)!important;color:#fff!important}
+body[data-admin-section="games"] .list-toolbar>label{margin-left:auto;display:flex;align-items:center;gap:8px;font:600 12px var(--hq-label);letter-spacing:.08em;text-transform:uppercase;color:var(--hq-muted)}
+body[data-admin-section="games"] .list-toolbar input[type=search]{background:var(--hq-panel)!important;border:1px solid var(--hq-line)!important;border-radius:8px!important;color:var(--hq-fg)!important;padding:9px 12px!important;min-width:220px}
+body[data-admin-section="games"] .list-toolbar+p,body[data-admin-section="games"] .jd-v26-hint{color:var(--hq-muted);font-size:12.5px}
+.hq-games-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:14px 0 6px}
+.hq-mini-sel{display:flex;align-items:center;gap:8px;font:600 12px var(--hq-label);letter-spacing:.1em;text-transform:uppercase;color:var(--hq-muted)}
+.hq-mini-sel select{background:var(--hq-panel);color:var(--hq-fg);border:1px solid var(--hq-line);border-radius:8px;padding:8px 10px;font:700 14px var(--hq-label)}
+.hq-chips{display:flex;gap:6px;flex-wrap:wrap}
+#admin-shell .hq-chip{min-height:34px!important;padding:6px 12px!important;border-radius:999px!important;border:1px solid var(--hq-line)!important;background:transparent!important;color:var(--hq-muted)!important;font:600 13px/1 var(--hq-body)!important}
+#admin-shell .hq-chip em{font-style:normal;opacity:.7;margin-left:4px}
+#admin-shell .hq-chip[aria-pressed="true"]{background:#fff!important;color:#071224!important;border-color:#fff!important}
+.hq-sub{font:700 13px/1 var(--hq-label)!important;letter-spacing:.12em;text-transform:uppercase;color:var(--hq-muted)!important;margin:18px 0 8px!important}
+.hq-games{background:var(--hq-panel);border:1px solid var(--hq-line);border-radius:12px;overflow:hidden}
+.hq-game{display:grid;grid-template-columns:110px minmax(0,1fr) auto auto;gap:16px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--hq-line)}
+.hq-game:last-child{border-bottom:0}
+.hq-game:hover{background:var(--hq-panel-2)}
+.hq-game-date b{display:block;font:800 22px/1 var(--hq-display);text-transform:uppercase;color:#fff}
+.hq-game-date small{font:600 12px var(--hq-label);letter-spacing:.06em;color:var(--hq-muted);text-transform:uppercase}
+.hq-game-opp{display:flex;align-items:center;gap:12px;min-width:0}
+.hq-game-opp .hq-mark{width:36px;height:36px}
+.hq-game-opp b{display:block;color:var(--hq-fg);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hq-game-opp small{color:var(--hq-muted);font-size:12.5px}
+.hq-game-opp>div{min-width:0}
+.hq-game-act{display:flex;gap:6px;justify-content:flex-end}
+.hq-pill.bad{color:#FF6170;box-shadow:inset 0 0 0 1px currentColor}
+.hq-pill.off{color:var(--hq-muted)}
+.hq-game-cancelled,.hq-game-postponed{opacity:.7}
+@media (max-width:760px){.hq-game{grid-template-columns:72px minmax(0,1fr) auto;gap:10px;padding:12px}.hq-game-act{grid-column:1/-1;justify-content:flex-start}.hq-game-date b{font-size:18px}}
+
+/* Roster */
+body[data-admin-section="players"] .jd-players-toolbar{background:transparent!important;border:0!important;padding:0!important;gap:10px!important}
+body[data-admin-section="players"] .jd-players-toolbar .button,body[data-admin-section="players"] .jd-tools-button{min-height:40px!important;border-radius:6px!important;font:700 13px/1 var(--hq-label)!important;letter-spacing:.06em!important;text-transform:uppercase}
+body[data-admin-section="players"] .jd-tools-button{background:transparent!important;border:1px solid var(--hq-line)!important;color:var(--hq-fg)!important}
+body[data-admin-section="players"] .jd-player-season-picker select{background:var(--hq-panel)!important;border:1px solid var(--hq-line)!important;border-radius:8px!important;color:var(--hq-fg)!important;font:700 14px var(--hq-label)!important;min-height:40px}
+body[data-admin-section="players"] .jd-season-roster-summary{background:transparent!important;border:0!important;border-bottom:1px solid var(--hq-line)!important;box-shadow:none!important;padding:6px 0 14px!important}
+body[data-admin-section="players"] .jd-season-roster-summary strong{font:900 30px/1 var(--hq-display)!important;color:#fff}
+.jd-season-player-list{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(300px,1fr))!important;gap:10px!important}
+.jd-season-player-row{display:grid!important;grid-template-columns:64px minmax(0,1fr) auto!important;grid-template-areas:"thumb num act" "thumb copy act"!important;grid-template-rows:auto auto;row-gap:2px!important;gap:12px!important;align-items:center!important;padding:10px!important;border:1px solid var(--hq-line)!important;border-radius:12px!important;background:var(--hq-panel)!important;box-shadow:none!important;min-height:0!important}
+.jd-season-player-row:hover{border-color:#2D4A78!important}
+.jd-season-player-thumb{grid-area:thumb;width:64px!important;height:80px!important;border-radius:8px!important;overflow:hidden;background:var(--hq-panel-2)!important;display:grid;place-items:center}
+.jd-season-player-thumb img{width:100%!important;height:100%!important;object-fit:cover;object-position:50% 15%}
+.jd-season-player-thumb span{font:900 26px var(--hq-display)!important;color:var(--hq-muted)!important}
+.jd-season-player-number{grid-area:num;align-self:end;font:600 13px/1 var(--hq-label)!important;letter-spacing:.1em;color:var(--hq-sky)!important;font-style:normal!important;width:auto!important;height:auto!important;background:none!important;border:0!important;padding:0!important}
+.jd-season-player-copy{grid-area:copy;min-width:0;align-self:start}
+.jd-season-player-copy strong{display:block;font:800 20px/1.05 var(--hq-display)!important;text-transform:uppercase;color:#fff!important}
+.jd-season-player-copy>span:last-child{font:600 12px var(--hq-label)!important;letter-spacing:.08em;text-transform:uppercase;color:var(--hq-muted)!important}
+.jd-season-player-row .jd-team-actions{grid-area:act}
+.jd-season-player-row .jd-team-actions summary{min-height:36px!important;padding:8px 12px!important;border-radius:6px!important;border:1px solid var(--hq-line)!important;background:transparent!important;font:700 12px/1 var(--hq-label)!important;letter-spacing:.06em;text-transform:uppercase;color:var(--hq-fg)!important;list-style:none}
+
+/* Graphic Studio: one panel at a time on desktop */
+.jd-graphic-intro{display:none!important}
+.jd-graphic-layout:has(> .jd-mobile-tabs){grid-template-rows:auto 1fr}
+.jd-graphic-layout>.jd-mobile-tabs{display:flex!important;grid-column:1;grid-row:1;gap:4px;flex-wrap:wrap;padding:0!important;background:transparent!important;border-bottom:1px solid var(--hq-line);overflow:visible}
+.jd-graphic-layout>.jd-graphic-controls{grid-column:1;grid-row:2}
+.jd-graphic-layout:has(> .jd-mobile-tabs)>.jd-graphic-stage-wrap{grid-column:2;grid-row:1/3}
+.jd-graphic-layout>.jd-mobile-tabs button{min-height:0!important;padding:11px 12px!important;border:0!important;border-bottom:3px solid transparent!important;border-radius:0!important;background:transparent!important;color:var(--hq-muted)!important;font:700 13px/1 var(--hq-label)!important;letter-spacing:.06em;text-transform:uppercase}
+.jd-graphic-layout>.jd-mobile-tabs button[aria-selected="true"]{color:#fff!important;border-bottom-color:var(--hq-red)!important;background:transparent!important}
+.jd-graphic-layout>.jd-mobile-tabs #jd-tab-placement,.jd-graphic-layout>.jd-mobile-tabs #jd-tab-effects{display:none!important}
+.jd-graphic-layout:has(> .jd-mobile-tabs) .jd-graphic-controls>*:not(.jd-mobile-selected){display:none!important}
+.jd-graphic-controls{background:var(--hq-panel)!important;border:1px solid var(--hq-line)!important;border-radius:12px!important}
+.jd-graphic-controls section,.jd-graphic-controls details{border:0!important;background:transparent!important;padding:4px 2px!important;box-shadow:none!important}
+.jd-graphic-stage-wrap{border:1px solid var(--hq-line)!important;border-radius:12px!important;background:radial-gradient(circle at 50% 18%,#13284a,#060E1C 72%)!important}
+.jd-graphic-controls h3,.jd-graphic-controls .jd-section-title strong{font:800 20px/1 var(--hq-display)!important;text-transform:uppercase;color:#fff!important;letter-spacing:.01em}
+.jd-graphic-controls label{font-family:var(--hq-label)!important;letter-spacing:.08em}
+.jd-graphic-controls select,.jd-graphic-controls input[type=text],.jd-graphic-controls input[type=number],.jd-graphic-controls textarea{background:var(--hq-bg)!important;border:1px solid var(--hq-line)!important;border-radius:8px!important;color:var(--hq-fg)!important;font:600 15px var(--hq-body)!important;min-height:44px}
+#section-content .jd-graphic-shell button:not(.jd-graphic-layout>.jd-mobile-tabs button){border-radius:8px!important;font-family:var(--hq-label)!important;letter-spacing:.05em}
+.jd-graphic-controls input[type=range]{accent-color:var(--hq-blue)}

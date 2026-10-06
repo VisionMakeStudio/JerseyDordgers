@@ -4,7 +4,7 @@ const text=z.string().max(10000), short=z.string().max(300), id=z.string().regex
 const link=z.string().max(2000).refine(v=>!v||/^https:\/\//i.test(v),'Use an https:// link');
 const image=z.string().max(2000).refine(v=>!v||/^\/assets\/[a-zA-Z0-9_.-]+$/.test(v)||/^\/api\/images\/[a-zA-Z0-9_.-]+$/.test(v),'Choose an uploaded image');
 const video=z.string().max(2000).refine(v=>!v||/^\/api\/videos\/[a-f0-9-]+\.(mp4|webm)$/.test(v),'Choose an uploaded MP4 or WebM video');
-const metric=z.string().max(30).refine(v=>!v||v==='-'||/^\d*(\.\d+)?$/.test(v),'Use a number or dash');
+const metric=z.preprocess(v=>{const t=String(v??'').trim().replace(/,/g,'');if(!t||t==='-')return t;if(/^-?\d*(\.\d+)?$/.test(t)&&t!=='-.')return t;if(/^-?\d+\.$/.test(t))return t.slice(0,-1);return '-'},z.string().max(30));
 const stats=z.record(z.string().max(40),metric);
 const color=z.string().regex(/^#[0-9a-fA-F]{6}$/,'Choose a valid color');
 const optionalId=z.union([z.literal(''),id]);
