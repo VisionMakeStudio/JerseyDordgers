@@ -174,3 +174,20 @@ body[data-admin-section="players"] .jd-season-roster-summary strong{font:900 30p
 .jd-graphic-controls select,.jd-graphic-controls input[type=text],.jd-graphic-controls input[type=number],.jd-graphic-controls textarea{background:var(--hq-bg)!important;border:1px solid var(--hq-line)!important;border-radius:8px!important;color:var(--hq-fg)!important;font:600 15px var(--hq-body)!important;min-height:44px}
 #section-content .jd-graphic-shell button:not(.jd-graphic-layout>.jd-mobile-tabs button){border-radius:8px!important;font-family:var(--hq-label)!important;letter-spacing:.05em}
 .jd-graphic-controls input[type=range]{accent-color:var(--hq-blue)}
+
+/* Paste recap */
+.hq-sheet.hq-wide{width:min(640px,100vw)}
+.hq-check{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--hq-fg);padding:10px 12px;border:1px solid var(--hq-line);border-radius:8px;background:var(--hq-bg)}
+.hq-check input{width:18px;height:18px;accent-color:var(--hq-blue)}
+.hq-rc-slot{display:grid;gap:8px;padding:14px;border:1px solid var(--hq-line);border-radius:12px;background:var(--hq-panel-2)}
+.hq-rc-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.hq-rc-h b{font:800 20px/1 var(--hq-display);text-transform:uppercase;color:#fff}
+.hq-rc-h small{color:var(--hq-muted);font-size:12.5px}
+.hq-paste,.hq-line{width:100%;background:var(--hq-bg);border:1px solid var(--hq-line);border-radius:8px;color:var(--hq-fg);padding:10px 12px;font:14px/1.45 var(--hq-body);resize:vertical}
+.hq-line{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+.hq-rc-prev{display:grid;gap:4px;padding:10px 12px;border-left:3px solid var(--hq-blue);background:rgba(14,92,184,.12);border-radius:0 8px 8px 0}
+.hq-rc-prev b{color:#fff;font-size:15px}
+.hq-rc-prev small{color:var(--hq-muted);font-size:12.5px}
+.hq-rc-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.hq-more summary{cursor:pointer;color:var(--hq-sky);font:600 12px var(--hq-label);letter-spacing:.08em;text-transform:uppercase;list-style:none}
+.hq-more[open] summary{margin-bottom:8px}

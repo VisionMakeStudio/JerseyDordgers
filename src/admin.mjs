@@ -125,7 +125,7 @@ function hqNeeds(sid){
  if(noPhoto.length)items.push({key:'photo:'+noPhoto.map(p=>p.id).sort().join(','),sev:'mid',title:`${noPhoto.length} player${noPhoto.length>1?'s have':' has'} no photo`,text:noPhoto.slice(0,6).map(p=>p.name).join(', ')+(noPhoto.length>6?` and ${noPhoto.length-6} more`:''),action:'<button type="button" class="hq-sm" data-hq-go="players">Add photos</button>'});
  const finals=games.filter(g=>g.status==='final');
  const noRecap=finals.filter(g=>!(data.gameRecaps||[]).some(r=>r.gameId===g.id));
- if(noRecap.length)items.push({key:'recap:'+noRecap.map(g=>g.id).join(','),sev:'mid',title:`${noRecap.length} final${noRecap.length>1?'s':''} without a recap`,text:noRecap.slice(0,3).map(g=>`${hqDate(g.date)} vs ${hqTeam(g.opponent)?.name||'Opponent'}`).join(' · '),action:'<button type="button" class="hq-sm" data-hq-go="gameRecaps">Write recap</button>'});
+ if(noRecap.length)items.push({key:'recap:'+noRecap.map(g=>g.id).join(','),sev:'mid',title:`${noRecap.length} final${noRecap.length>1?'s':''} without a recap`,text:noRecap.slice(0,3).map(g=>`${hqDate(g.date)} vs ${hqTeam(g.opponent)?.name||'Opponent'}`).join(' · '),action:`<button type="button" class="hq-sm" data-hq-recap="${esc(noRecap[0].id)}">Paste recap</button>`});
  const ppd=games.filter(g=>g.status==='postponed'&&!g.rescheduledDate);
  if(ppd.length)items.push({key:'ppd:'+ppd.map(g=>g.id).join(','),sev:'mid',title:`${ppd.length} postponed game${ppd.length>1?'s':''} need a new date`,text:ppd.map(g=>`${hqDate(g.date)} vs ${hqTeam(g.opponent)?.name||'Opponent'}`).join(' · '),action:'<button type="button" class="hq-sm" data-hq-go="games">Reschedule</button>'});
  if(finals.length&&!(data.weeklyAwards||[]).some(a=>a.season===sid&&a.published))items.push({key:'potw:'+sid,sev:'lo',title:'No Player of the Week yet this season',text:'The homepage hides this section until one is published.',action:'<button type="button" class="hq-sm" data-hq-go="weeklyAwards">Create</button>'});
@@ -168,13 +168,14 @@ function drawDashboard(){
     ${next?`<div class="hq-next"><div class="hq-next-row">${hqMark(hqTeam(next.opponent))}<div><b>${next.home?'vs':'@'} ${esc(hqTeam(next.opponent)?.name||'Opponent')}</b><small>${pair.length>1?'Doubleheader · ':''}${pair.map(g=>hqTime(g.rescheduledTime||g.time)).join(' and ')} · ${esc(data.fields.find(f=>f.id===next.field)?.name||'Field TBD')}</small></div></div><div class="hq-btns"><button type="button" class="hq-sm" data-hq-go="games">Edit game</button><button type="button" class="hq-sm" data-hq-go="graphic-generator">Make a graphic</button></div></div>`:'<p class="hq-empty">Nothing scheduled. Add the next game in Games & Scores.</p>'}
    </div>
    <div class="hq-panel"><div class="hq-panel-h"><h2>Quick add</h2></div>
-    <div class="hq-quick"><button type="button" class="hq-sm" data-hq-score="">Final score</button><button type="button" class="hq-sm" data-hq-go="media">Photos or video</button><button type="button" class="hq-sm" data-hq-go="stats">Import stats</button><button type="button" class="hq-sm" data-hq-go="gameRecaps">Write recap</button><button type="button" class="hq-sm" data-hq-go="weeklyAwards">Player of the Week</button><button type="button" class="hq-sm" data-hq-go="games">Add a game</button></div>
+    <div class="hq-quick"><button type="button" class="hq-sm" data-hq-score="">Final score</button><button type="button" class="hq-sm" data-hq-go="media">Photos or video</button><button type="button" class="hq-sm" data-hq-go="stats">Import stats</button><button type="button" class="hq-sm" data-hq-recap="">Paste recap</button><button type="button" class="hq-sm" data-hq-go="weeklyAwards">Player of the Week</button><button type="button" class="hq-sm" data-hq-go="games">Add a game</button></div>
    </div>
   </div>
  </section>`;
  $('#jd-dashboard-season')?.addEventListener('change',event=>{dashboardSeason=event.target.value;sessionStorage.setItem('jd-admin-dashboard-season',dashboardSeason);drawDashboard()});
  document.querySelectorAll('[data-hq-go]').forEach(b=>b.onclick=()=>navToSection(b.dataset.hqGo));
  document.querySelectorAll('[data-hq-score]').forEach(b=>b.onclick=()=>openScoreSheet(b.dataset.hqScore));
+ document.querySelectorAll('[data-hq-recap]').forEach(b=>b.onclick=()=>openRecapPaste(b.dataset.hqRecap));
  document.querySelectorAll('[data-hq-dismiss]').forEach(b=>b.onclick=()=>{hqDismiss(b.dataset.hqDismiss);drawDashboard()});
  document.querySelector('[data-hq-undismiss]')?.addEventListener('click',()=>{try{localStorage.removeItem('jd-hq-dismissed')}catch{}drawDashboard()});
  document.querySelector('[data-hq-save]')?.addEventListener('click',async()=>{await save();drawDashboard()});
@@ -191,11 +192,12 @@ function hqGamesList(items){
  const up=shown.filter(g=>['upcoming','live'].includes(hqGameState(g))).sort((a,b)=>dashboardGameDate(a).localeCompare(dashboardGameDate(b)));
  const past=shown.filter(g=>!['upcoming','live'].includes(hqGameState(g))).sort((a,b)=>dashboardGameDate(b).localeCompare(dashboardGameDate(a)));
  const pill=g=>{const st=hqGameState(g);return st==='final'?`<span class="hq-pill ${g.ourScore>g.theirScore?'ok':'bad'}">${g.ourScore>g.theirScore?'W':g.ourScore<g.theirScore?'L':'T'} ${g.ourScore}-${g.theirScore}</span>`:st==='pending'?'<span class="hq-pill warn">Needs score</span>':st==='cancelled'?'<span class="hq-pill off">Cancelled</span>':st==='postponed'?'<span class="hq-pill off">Postponed</span>':st==='live'?'<span class="hq-pill bad">Live</span>':`<span class="hq-pill">${hqTime(g.rescheduledTime||g.time)}</span>`};
- const row=g=>{const t=hqTeam(g.opponent),f=data.fields.find(x=>x.id===g.field),st=hqGameState(g);return `<div class="hq-game hq-game-${st}"><div class="hq-game-date"><b>${esc(hqDate(g.rescheduledDate||g.date).replace(/^\w+,\s/,''))}</b><small>${esc(hqDate(g.rescheduledDate||g.date).split(',')[0])} · ${esc(hqTime(g.rescheduledTime||g.time))}</small></div><div class="hq-game-opp">${hqMark(t)}<div><b>${g.home?'vs':'@'} ${esc(t?.name||'Opponent')}</b><small>${esc(f?.name||'Field TBD')}</small></div></div><div class="hq-game-st">${pill(g)}</div><div class="hq-game-act">${['pending','live'].includes(st)?`<button type="button" class="button hq-sm" data-hq-score="${esc(g.id)}">Enter score</button>`:st==='final'?`<button type="button" class="hq-sm" data-hq-score="${esc(g.id)}">Edit score</button>`:''}<button type="button" class="hq-sm" data-edit="${esc(g.id)}">Edit</button></div></div>`};
+ const row=g=>{const t=hqTeam(g.opponent),f=data.fields.find(x=>x.id===g.field),st=hqGameState(g);return `<div class="hq-game hq-game-${st}"><div class="hq-game-date"><b>${esc(hqDate(g.rescheduledDate||g.date).replace(/^\w+,\s/,''))}</b><small>${esc(hqDate(g.rescheduledDate||g.date).split(',')[0])} · ${esc(hqTime(g.rescheduledTime||g.time))}</small></div><div class="hq-game-opp">${hqMark(t)}<div><b>${g.home?'vs':'@'} ${esc(t?.name||'Opponent')}</b><small>${esc(f?.name||'Field TBD')}</small></div></div><div class="hq-game-st">${pill(g)}</div><div class="hq-game-act">${['pending','live'].includes(st)?`<button type="button" class="button hq-sm" data-hq-score="${esc(g.id)}">Enter score</button>`:st==='final'?`${(data.gameRecaps||[]).some(r=>r.gameId===g.id)?'':`<button type="button" class="hq-sm" data-hq-recap="${esc(g.id)}">Add recap</button>`}<button type="button" class="hq-sm" data-hq-score="${esc(g.id)}">Edit score</button>`:''}<button type="button" class="hq-sm" data-edit="${esc(g.id)}">Edit</button></div></div>`};
  const box=$('#item-list');
  box.innerHTML=`<div class="hq-games-bar"><label class="hq-mini-sel">Season <select id="hq-game-season">${data.seasons.map(x=>`<option value="${esc(x.id)}" ${x.id===hqGameSeason?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label><div class="hq-chips">${chips.map(([k,l])=>`<button type="button" class="hq-chip" aria-pressed="${k===hqGameFilter}" data-hq-filter="${k}">${l} <em>${count(k)}</em></button>`).join('')}</div></div>${up.length?`<h3 class="hq-sub">Upcoming</h3><div class="hq-games">${up.map(row).join('')}</div>`:''}${past.length?`<h3 class="hq-sub">${hqGameFilter==='pending'?'Needs a score':'Results'}</h3><div class="hq-games">${past.map(row).join('')}</div>`:''}${!up.length&&!past.length?'<p class="hq-empty">No games here yet. Add one with the buttons above.</p>':''}`;
  box.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(data.games.find(x=>x.id===b.dataset.edit)));
  box.querySelectorAll('[data-hq-score]').forEach(b=>b.onclick=()=>openScoreSheet(b.dataset.hqScore));
+ box.querySelectorAll('[data-hq-recap]').forEach(b=>b.onclick=()=>openRecapPaste(b.dataset.hqRecap));
  box.querySelectorAll('[data-hq-filter]').forEach(b=>b.onclick=()=>{hqGameFilter=b.dataset.hqFilter;hqGamesList(items)});
  $('#hq-game-season').onchange=e=>{hqGameSeason=e.target.value;hqGameFilter='all';hqGamesList(items)};
 }
@@ -209,6 +211,85 @@ function hqStudioTabs(){
 }
 document.addEventListener('jd-admin-render',e=>{if(e.detail?.section!=='graphic-generator')return;let n=0;const t=setInterval(()=>{if(hqStudioTabs()||++n>60)clearInterval(t)},100)});
 window.addEventListener('resize',()=>{if(section==='graphic-generator')hqStudioTabs()});
+/* ---------- Paste a GameChanger recap (one game or a doubleheader) ---------- */
+function parseGcRecap(text){
+ const raw=String(text||'').replace(/\r/g,'').split('\n').map(l=>l.trim()).filter(Boolean);
+ if(!raw.length)return null;
+ let title='',byline='',copyright='';const paras=[];
+ raw.forEach((l,i)=>{if(!title&&i===0&&!/^by\s/i.test(l)){title=l;return}if(/^by\s/i.test(l)&&l.length<60&&!byline){byline=l;return}if(/^copyright\s/i.test(l)){copyright=l;return}paras.push(l)});
+ if(!title&&paras.length)title=paras.shift();
+ const team=(data.settings.teamName||'Jersey Dodgers').toLowerCase(),all=[title,...paras].join(' ');
+ let hi=null,lo=null;const m=(paras[0]||all).match(/\b(\d{1,2})\s*[-–]\s*(\d{1,2})\b/)||all.match(/\b(\d{1,2})\s*[-–]\s*(\d{1,2})\b/);
+ if(m){hi=Math.max(+m[1],+m[2]);lo=Math.min(+m[1],+m[2])}
+ const lower=all.toLowerCase(),t=team.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+ const lossRe=new RegExp(`${t}[^.]{0,40}\\b(fell|fall|falls|lost|lose|loses|come up short|comes up short|came up short|drop|drops|dropped)\\b|\\b(defeat|defeats|defeated|beat|beats|edge|edges|edged|top|tops|topped|past|over|outlast|outlasts|blank|blanks)\\b[^.]{0,6}${t}`);
+ const winRe=new RegExp(`${t}[^.]{0,40}\\b(defeat|defeats|defeated|beat|beats|won|win|wins|edge|edges|edged|top|tops|topped|outlast|outlasts|blank|blanks|cruise|cruises|roll|rolls)\\b|\\b(fall|falls|fell|lost|lose|loses)\\b[^.]{0,8}to ${t}`);
+ const firstChunk=(title+' '+(paras[0]||'')).toLowerCase();
+ let res='';if(hi!==null&&hi===lo)res='T';else if(lossRe.test(firstChunk))res='L';else if(winRe.test(firstChunk))res='W';
+ const opp=data.teams.filter(x=>x.name.toLowerCase()!==team).sort((a,b)=>b.name.length-a.name.length).find(x=>lower.includes(x.name.toLowerCase()));
+ const summary=paras[0]||'';
+ const body=[byline,...paras,copyright].filter(Boolean).join('\n\n');
+ return {title,byline,summary,body,hi,lo,res,opponent:opp||null};
+}
+function recapScoreFits(p,g){return p&&g&&p.hi!==null&&Number.isInteger(g.ourScore)&&Number.isInteger(g.theirScore)&&Math.max(g.ourScore,g.theirScore)===p.hi&&Math.min(g.ourScore,g.theirScore)===p.lo}
+function openRecapPaste(gameId){
+ const hasRecap=g=>(data.gameRecaps||[]).some(r=>r.gameId===g.id);
+ const finals=data.games.filter(g=>g.status==='final').sort((a,b)=>dashboardGameDate(b).localeCompare(dashboardGameDate(a)));
+ const playedish=data.games.filter(g=>['final','scheduled','live'].includes(g.status)&&(g.rescheduledDate||g.date)<=etToday()).sort((a,b)=>dashboardGameDate(b).localeCompare(dashboardGameDate(a)));
+ let g1=data.games.find(g=>g.id===gameId)||finals.find(g=>!hasRecap(g))||playedish[0];
+ let sheet=$('#hq-recap');if(!sheet){sheet=document.createElement('dialog');sheet.id='hq-recap';sheet.className='hq-sheet hq-wide';document.body.append(sheet)}
+ const label=x=>`${hqDate(x.rescheduledDate||x.date)} · ${hqTime(x.rescheduledTime||x.time)} · ${x.home?'vs':'@'} ${hqTeam(x.opponent)?.name||'Opponent'}${x.status==='final'?` · ${x.ourScore}-${x.theirScore}`:''}${hasRecap(x)?' · has recap':''}`;
+ const pairOf=g=>g?data.games.filter(x=>x.id!==g.id&&x.season===g.season&&(x.rescheduledDate||x.date)===(g.rescheduledDate||g.date)&&x.opponent===g.opponent&&x.status!=='cancelled').sort((a,b)=>(a.time||'').localeCompare(b.time||'')):[];
+ let texts=['',''],lines=['',''],useTwo=false;
+ const paint=()=>{
+  let pair=pairOf(g1);const games=[g1,...pair].filter(Boolean).sort((a,b)=>(a.rescheduledTime||a.time||'').localeCompare(b.rescheduledTime||b.time||''));
+  if(pair.length&&!sheet.dataset.touched)useTwo=true;
+  const slots=useTwo&&games.length>1?games.slice(0,2):[g1];
+  sheet.innerHTML=`<form id="hq-recap-form" method="dialog"><div class="hq-sheet-h"><div><span class="eyebrow">PASTE GAMECHANGER RECAP</span><h2>${slots.length>1?'Doubleheader recap':'Game recap'}</h2></div><button type="button" class="hq-x" data-x aria-label="Close">×</button></div>
+  <div class="hq-sheet-b">
+   <label class="hq-field">Game<select id="hq-rc-game">${(playedish.length?playedish:finals).map(x=>`<option value="${esc(x.id)}" ${x.id===g1?.id?'selected':''}>${esc(label(x))}</option>`).join('')}</select></label>
+   ${pair.length?`<label class="hq-check"><input type="checkbox" id="hq-rc-two" ${useTwo?'checked':''}> Doubleheader: put both games in one story</label>`:''}
+   ${slots.map((g,i)=>`<section class="hq-rc-slot"><div class="hq-rc-h"><b>${slots.length>1?`Game ${i+1}`:'Recap'}</b><small>${esc(label(g))}</small></div>
+    <textarea class="hq-paste" data-slot="${i}" rows="7" placeholder="Copy the whole recap on GameChanger (headline through the copyright line) and paste it here.">${esc(texts[i])}</textarea>
+    <div class="hq-rc-out" data-out="${i}"></div>
+    <details class="hq-more"><summary>Add inning-by-inning score (optional)</summary><textarea class="hq-line" data-line="${i}" rows="3" placeholder="Team	1	2	3	4	5	6	7	R	H	E">${esc(lines[i])}</textarea></details>
+   </section>`).join('')}
+   <p class="hq-hint">The headline, intro and story fill in from what you paste. The score comes from the game in your schedule. Publishing puts it on the website right away${slots.length>1?' as one story':''}.${dirty?' Your other unpublished changes will be published too.':''}</p>
+  </div>
+  <div class="hq-sheet-f"><p class="form-message" role="status"></p><button type="button" data-x>Cancel</button><button type="submit" class="button" id="hq-rc-pub">Publish recap</button></div></form>`;
+  const refresh=()=>{slots.forEach((g,i)=>{const p=parseGcRecap(texts[i]),out=sheet.querySelector(`[data-out="${i}"]`);if(!out)return;if(!p){out.innerHTML='';return}
+   const fits=recapScoreFits(p,g),other=slots.find((x,j)=>j!==i&&recapScoreFits(p,x));
+   out.innerHTML=`<div class="hq-rc-prev"><b>${esc(p.title||'No headline found')}</b><small>${esc(p.summary.slice(0,180))}${p.summary.length>180?'…':''}</small><div class="hq-rc-tags">${p.hi!==null?`<span class="hq-pill ${fits?'ok':'warn'}">${p.res?p.res+' ':''}${p.hi}-${p.lo} in story</span>`:''}${g.status==='final'?`<span class="hq-pill">${g.ourScore}-${g.theirScore} in schedule</span>`:''}${other?'<span class="hq-pill warn">This looks like the other game</span>':''}${p.hi!==null&&g.status!=='final'&&p.res?'<span class="hq-pill">Will mark this game final</span>':''}</div></div>`;});};
+  sheet.querySelectorAll('.hq-paste').forEach(t=>t.addEventListener('input',()=>{texts[+t.dataset.slot]=t.value;
+   if(slots.length===2){const a=parseGcRecap(texts[0]),b=parseGcRecap(texts[1]);if(a&&b&&!recapScoreFits(a,slots[0])&&recapScoreFits(a,slots[1])&&recapScoreFits(b,slots[0])){texts=[texts[1],texts[0]];paint();return}}
+   refresh()}));
+  sheet.querySelectorAll('.hq-line').forEach(t=>t.addEventListener('input',()=>{lines[+t.dataset.line]=t.value}));
+  sheet.querySelectorAll('.hq-line').forEach(t=>t.addEventListener('paste',e=>{const html=e.clipboardData?.getData('text/html');if(!html)return;const doc=new DOMParser().parseFromString(html,'text/html'),tb=doc.querySelector('table');if(!tb)return;e.preventDefault();t.value=[...tb.rows].map(r=>[...r.cells].map(c=>c.textContent.trim()).join('\t')).join('\n');lines[+t.dataset.line]=t.value}));
+  sheet.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>sheet.close());
+  $('#hq-rc-game').onchange=e=>{g1=data.games.find(x=>x.id===e.target.value);delete sheet.dataset.touched;texts=['',''];lines=['',''];useTwo=false;paint()};
+  $('#hq-rc-two')?.addEventListener('change',e=>{sheet.dataset.touched='1';useTwo=e.target.checked;paint()});
+  refresh();
+  $('#hq-recap-form').onsubmit=async e=>{e.preventDefault();const msg=sheet.querySelector('.form-message');
+   sheet.querySelectorAll('.hq-paste').forEach(t=>{texts[+t.dataset.slot]=t.value});sheet.querySelectorAll('.hq-line').forEach(t=>{lines[+t.dataset.line]=t.value});
+   const parsed=slots.map((g,i)=>({g,p:parseGcRecap(texts[i]),line:(lines[i]||'').trim()}));
+   if(parsed.some(x=>!x.p)){msg.textContent=slots.length>1?'Paste a recap into both boxes, or uncheck Doubleheader.':'Paste the recap first.';return}
+   const candidate=structuredClone(data);candidate.gameRecaps=candidate.gameRecaps||[];
+   for(const {g,p,line} of parsed){
+    const game=candidate.games.find(x=>x.id===g.id);
+    if(game.status!=='final'&&p.hi!==null&&p.res){game.status='final';game.ourScore=p.res==='W'?p.hi:p.lo;game.theirScore=p.res==='W'?p.lo:p.hi;if(!/^JDMETA:/.test(game.statusReason||''))game.statusReason=''}
+    const existing=candidate.gameRecaps.find(r=>r.gameId===g.id);
+    const rec={...(existing||{}),id:existing?.id||crypto.randomUUID(),gameId:g.id,title:p.title||`${data.settings.teamName} vs ${hqTeam(g.opponent)?.name||'Opponent'}`,date:game.rescheduledDate||game.date,opponent:hqTeam(g.opponent)?.name||p.opponent?.name||'',ourScore:Number.isInteger(game.ourScore)?game.ourScore:null,theirScore:Number.isInteger(game.theirScore)?game.theirScore:null,source:game.gameLink||existing?.source||'',summary:p.summary,body:p.body,lineScore:line||existing?.lineScore||'',boxScore:existing?.boxScore||'',image:existing?.image||'',author:p.byline?p.byline.replace(/^by\s+/i,''):'Jersey Dodgers',published:true};
+    if(existing)candidate.gameRecaps=candidate.gameRecaps.map(r=>r.id===rec.id?rec:r);else candidate.gameRecaps.push(rec);
+    game.recap=rec.summary||rec.title;
+   }
+   const ok=contentSchema.safeParse(candidate);if(!ok.success){msg.textContent=ok.error.issues.map(i=>i.path.join('.')+': '+i.message).join('; ');return}
+   data=ok.data;setDirty();$('#hq-rc-pub').disabled=true;msg.textContent='Publishing…';await save();
+   if(dirty){msg.textContent='Could not publish. Check the message at the top and try again.';$('#hq-rc-pub').disabled=false;return}
+   sheet.close();message(slots.length>1?'Doubleheader recap published as one story.':'Recap published.');if(section==='dashboard')drawDashboard();else draw()};
+ };
+ paint();sheet.showModal();
+}
+
 function openScoreSheet(gameId){
  const today=etToday();
  const choices=data.games.filter(g=>['scheduled','live','postponed'].includes(g.status)&&(g.rescheduledDate||g.date)<=today).sort((a,b)=>dashboardGameDate(b).localeCompare(dashboardGameDate(a)));
@@ -268,9 +349,9 @@ function drawSection(){
  if(section==='settings'){$('#section-content').innerHTML='<div class="jd-section-intro-card"><div><span class="eyebrow">PUBLIC WEBSITE</span><h2>Homepage & site content</h2><p>Branding, hero content, league links, contact details and homepage feature copy are grouped inside one organized editor.</p></div><button class="button" id="edit-settings">Edit website content</button></div><div class="settings-summary"><img src="'+esc(data.settings.heroImage)+'" alt="Current hero"><div><span class="eyebrow">CURRENT HOMEPAGE</span><h2>'+esc(data.settings.teamName)+'</h2><p>'+esc(data.settings.heroTitle)+'</p><p>'+esc(data.settings.heroText)+'</p></div></div>';$('#edit-settings').onclick=()=>edit(data.settings);return}
  if(section==='standings'){$('#section-content').innerHTML='<div class="jd-plugin-loading" role="status">Loading standings…</div>';return}
  let showRemoved=false;
- $('#section-content').innerHTML=`<div class="list-toolbar"><button class="button" id="add-item">+ Add ${section==='stats'?'statistics':section==='media'?'post or video':section==='standings'?'team standing':section==='players'?'player':'entry'}</button>${section==='media'?'<button id="bulk-media">Upload photo gallery</button>':''}<label>Find<input id="filter" type="search" placeholder="Search ${labels[section].toLowerCase()}"></label>${section==='stats'?'<button id="import-csv">Import season CSV</button>':section==='players'?'<button id="show-removed">Show removed players</button>':''}</div><div id="item-list"></div>`;
+ $('#section-content').innerHTML=`<div class="list-toolbar"><button class="button" id="add-item">+ Add ${section==='stats'?'statistics':section==='media'?'post or video':section==='standings'?'team standing':section==='players'?'player':'entry'}</button>${section==='media'?'<button id="bulk-media">Upload photo gallery</button>':''}${section==='gameRecaps'?'<button id="paste-recap" class="button">Paste GameChanger recap</button>':''}<label>Find<input id="filter" type="search" placeholder="Search ${labels[section].toLowerCase()}"></label>${section==='stats'?'<button id="import-csv">Import season CSV</button>':section==='players'?'<button id="show-removed">Show removed players</button>':''}</div><div id="item-list"></div>`;
  const list=()=>{const q=$('#filter').value.toLowerCase(),items=data[section].filter(x=>(section!=='players'||showRemoved||x.active)&&title(x).toLowerCase().includes(q));if(section==='games'){hqGamesList(items);return}$('#item-list').innerHTML=items.map(item=>`<div class="admin-row ${section==='players'&&!item.active?'is-removed':''}"><div class="admin-row-info">${section==='media'?`<span class="admin-media-thumb">${item.image?`<img src="${esc(item.image)}" alt="" loading="lazy">`:item.video?'<span aria-hidden="true">▶</span>':'<span aria-hidden="true">—</span>'}</span>`:''}<span><strong>${esc(title(item))}</strong><small>${esc(section==='fields'?item.address:section==='games'?item.status:section==='players'?('#'+item.number+(item.active?'':' · Removed from roster')):section==='standings'?item.w+'–'+item.l+'–'+item.t:section==='gameRecaps'?(item.date+' · '+(item.published?'Published':'Draft')):section==='media'?(item.category+' · '+(item.published?'Published':'Hidden')):'')}</small></span></div><button data-edit="${item.id}">Edit</button></div>`).join('')||'<p class="empty">No entries yet.</p>';document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>edit(data[section].find(x=>x.id===b.dataset.edit)))};
- $('#filter').oninput=list;$('#add-item').onclick=()=>edit(null);if($('#bulk-media'))$('#bulk-media').onclick=bulkMedia;if($('#import-csv'))$('#import-csv').onclick=importCSV;if($('#show-removed'))$('#show-removed').onclick=()=>{showRemoved=!showRemoved;$('#show-removed').textContent=showRemoved?'Hide removed players':'Show removed players';list()};list()
+ $('#filter').oninput=list;$('#add-item').onclick=()=>edit(null);if($('#bulk-media'))$('#bulk-media').onclick=bulkMedia;if($('#paste-recap'))$('#paste-recap').onclick=()=>openRecapPaste();if($('#import-csv'))$('#import-csv').onclick=importCSV;if($('#show-removed'))$('#show-removed').onclick=()=>{showRemoved=!showRemoved;$('#show-removed').textContent=showRemoved?'Hide removed players':'Show removed players';list()};list()
 }
 function fieldHtml([key,label,type='text'],value){if(Array.isArray(type)||['seasons','players','teams','fields','games'].includes(type)){const opts=Array.isArray(type)?type.map(v=>({id:v,name:v})):type==='games'?[{id:'',name:'Choose a game from the schedule'},...data.games.slice().sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).map(g=>({id:g.id,name:`${g.date} · ${data.teams.find(t=>t.id===g.opponent)?.name||'Opponent'} · ${g.home?'Home':'Away'}`}))]:data[type];return `<label>${esc(label)}<select name="${key}">${opts.map(x=>`<option value="${x.id}" ${x.id===value?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label>`}if(type==='checkbox')return `<label class="check-label"><input name="${key}" type="checkbox" ${value?'checked':''}>${esc(label)}</label>`;if(type==='textarea')return `<label class="wide">${esc(label)}<textarea name="${key}" rows="4">${esc(value)}</textarea></label>`;if(type==='image')return `<label class="wide">${esc(label)}<input name="${key}" value="${esc(value)}" readonly><input type="file" accept="image/jpeg,image/png,image/webp" data-upload="${key}">${value?'<img class="image-preview" src="'+esc(value)+'" alt="Current image">':''}<button type="button" data-clear-image="${key}">Remove image</button></label>`;if(type==='video')return `<label class="wide">${esc(label)}<input name="${key}" value="${esc(value)}" readonly><small>Short MP4 or WebM, up to 5 MB. Paste a YouTube link below for longer videos.</small><input type="file" accept="video/mp4,video/webm" data-video-upload="${key}">${value?'<video class="video-preview" src="'+esc(value)+'" controls></video>':''}<button type="button" data-clear-video="${key}">Remove uploaded video</button></label>`;const inputType=type==='number-null'?'number':type==='date-optional'?'date':type==='time-optional'?'time':type;return `<label>${esc(label)}<input name="${key}" type="${inputType}" ${type.startsWith('number')?'min="0" step="1"':''} value="${esc(value)}"></label>`}
 const settingsEditorGroups=[
