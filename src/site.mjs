@@ -175,7 +175,7 @@ function shell(route) {
     ${[...NAV, ['videos', 'Videos'], ['players-of-the-week', 'Players of the Week'], ['tryouts', 'Tryouts']].map(([r, l]) => `<a href="/${r ? r + '/' : ''}">${l}</a>`).join('')}
     <div class="drawer-social">${ext(s.instagram, ICON.ig + ' Instagram')}${ext(s.youtube || 'https://youtube.com/@JerseyDodgers', ICON.yt + ' YouTube')}</div>
   </nav>`;
-  $('#footer').innerHTML = `<div class="wrap ft-in">
+  $('#footer').innerHTML = `<div class="wrap sub-band"><div class="sub-tx"><span class="lbl">Email updates</span><b>Never miss a Dodgers game</b><small>Get recaps, final scores, new photos and a reminder the day before every game.</small></div><form class="subform" novalidate><label class="sr" for="sub-email">Email address</label><input id="sub-email" type="email" name="email" placeholder="you@email.com" autocomplete="email" required><input class="honey" name="company" tabindex="-1" autocomplete="off" aria-hidden="true"><button class="btn red" type="submit">Subscribe</button><p class="sub-msg" role="status"></p></form></div><div class="wrap ft-in">
     <a class="brand" href="/"><img src="${esc(s.logo)}" alt=""><b>${esc(s.teamName)}<small>${esc(s.footerText || '')}</small></b></a>
     <nav class="ft-links" aria-label="Footer"><a href="/schedule/">Schedule</a><a href="/roster/">Roster</a><a href="/stats/">Stats</a><a href="/videos/">Videos</a><a href="/tryouts/">Tryouts</a><a href="/admin/">Admin</a></nav>
     <div class="ft-league">${s.leagueLogo ? `<img src="${esc(s.leagueLogo)}" alt="">` : ''}<div><b>${esc(s.leagueName || '')}</b>${ext(s.leagueJoinUrl, 'Join the league')}</div></div>
@@ -767,6 +767,21 @@ document.addEventListener('keydown', e => {
   if ($('#lightbox')?.open && lightboxList.length > 1) { if (e.key === 'ArrowRight') $('#lb-next').click(); if (e.key === 'ArrowLeft') $('#lb-prev').click(); }
 });
 document.addEventListener('submit', async e => {
+  const sf = e.target.closest('.subform');
+  if (sf) {
+    e.preventDefault();
+    const btn = sf.querySelector('button'), out = sf.querySelector('.sub-msg'), email = sf.email.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { out.textContent = 'Enter a valid email address.'; sf.email.focus(); return; }
+    btn.disabled = true; out.textContent = 'Signing you up…';
+    try {
+      const r = await fetch('/api/subscribe', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email, company: sf.company.value})});
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw Error(j.error || 'Could not sign you up.');
+      sf.reset(); out.textContent = j.already ? 'You are already on the list.' : 'You are on the list. Check your inbox for a welcome email.';
+    } catch (err) { out.textContent = err.message || 'That didn’t go through. Try again.'; }
+    finally { btn.disabled = false; }
+    return;
+  }
   const fm = e.target.closest('.pform'); if (!fm) return;
   e.preventDefault();
   const btn = fm.querySelector('[type=submit]'), out = fm.querySelector('.form-result');

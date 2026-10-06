@@ -3,19 +3,19 @@ import {login,logout,getUser,handleAuthCallback,acceptInvite,updateUser,requestP
 import {contentSchema} from './schema.mjs';
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let data,revision,section='dashboard',dirty=false,busy=false,shellReady=false,dashboardSeason='';const root=$('#admin-root');
-const labels={gameRecaps:'Game Recaps',dashboard:'Today',settings:'Homepage & site',seasons:'Seasons',fields:'Saved fields',teams:'Opponents & teams',games:'Schedule & scores',players:'Roster & players',stats:'Player statistics',standings:'Standings',weeklyAwards:'Players of the Week',spotlights:'Game highlights',media:'Photos, videos & social',channels:'Watch & follow links',achievements:'Trophy case',sponsors:'Sponsors','graphic-generator':'Graphic Generator','admin-settings':'Admin settings','staff-access':'Staff Access'};
+const labels={gameRecaps:'Game Recaps',dashboard:'Today',settings:'Homepage & site',seasons:'Seasons',fields:'Saved fields',teams:'Opponents & teams',games:'Schedule & scores',players:'Roster & players',stats:'Player statistics',standings:'Standings',weeklyAwards:'Players of the Week',spotlights:'Game highlights',media:'Photos, videos & social',channels:'Watch & follow links',achievements:'Trophy case',sponsors:'Sponsors','graphic-generator':'Graphic Generator','admin-settings':'Admin settings','staff-access':'Staff Access',subscribers:'Email subscribers'};
 const adminGroups=[
  {id:'dashboard',label:'Today',sections:[['dashboard','Today']]},
  {id:'games',label:'Games & Scores',sections:[['games','Schedule & scores'],['standings','Standings'],['seasons','Seasons'],['teams','Opponents'],['fields','Fields']]},
  {id:'team',label:'Roster & Stats',sections:[['players','Roster'],['stats','Player stats']]},
  {id:'content',label:'Stories & Media',sections:[['gameRecaps','Recaps'],['media','Photos & video'],['weeklyAwards','Players of the Week'],['achievements','Trophy case'],['sponsors','Sponsors'],['spotlights','Highlights']]},
  {id:'graphic',label:'Graphics',sections:[['graphic-generator','Graphic Generator']]},
- {id:'settings',label:'Site & Settings',sections:[['settings','Homepage & site'],['channels','Social links'],['staff-access','Staff access'],['admin-settings','Overview']]}
+ {id:'settings',label:'Site & Settings',sections:[['settings','Homepage & site'],['subscribers','Email subscribers'],['channels','Social links'],['staff-access','Staff access'],['admin-settings','Overview']]}
 ];
 const groupIcons={dashboard:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',games:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',team:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.6c2.6.2 4.6 2 5.3 5"/>',content:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',graphic:'<path d="M12 3l2.6 5.6 6.1.7-4.5 4.1 1.2 6L12 16.4 6.6 19.4l1.2-6L3.3 9.3l6.1-.7z"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'};
 const groupIcon=id=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${groupIcons[id]||''}</svg>`;
 const groupForSection=id=>adminGroups.find(group=>group.sections.some(([key])=>key===id))||adminGroups[0];
-const helpForSection=id=>id==='dashboard'?'Everything that needs your attention, without digging through every Admin page.':id==='graphic-generator'?'Create Player of the Week graphics without leaving the generator when you change a control.':id==='staff-access'?'Invite staff, manage roles and resend account setup links.':id==='admin-settings'?'Admin access and configuration tools live here.':id==='fields'?'Save a field once. Choose it in any game to reuse its address and Directions link.':id==='games'?'Add fixtures, final scores and GameChanger links. Weather appears automatically from the saved field and game time.':id==='players'?'Manage the season roster, permanent player profiles, jersey history and roster imports from one place.':id==='stats'?'Choose the season and Regular Season / Playoffs once, then manage player statistics and imports.':id==='media'?'Upload galleries and videos, manage featured homepage media and keep social content organized.':id==='channels'?'Arrange YouTube, Instagram, GameChanger and future platforms in one place.':id==='weeklyAwards'?'Publish one or two weekly winners, their featured stats and the finished social graphic.':id==='spotlights'?'Keep optional game highlights separate from the weekly awards system.':id==='settings'?'Edit homepage branding, league links, contact details and public website copy.':'Manage this part of the club website. Changes stay in draft until you choose Save & publish.';
+const helpForSection=id=>id==='subscribers'?'People who signed up for email updates on the website. Send them recaps, scores, photos and news. Game-day reminders send automatically.':id==='dashboard'?'Everything that needs your attention, without digging through every Admin page.':id==='graphic-generator'?'Create Player of the Week graphics without leaving the generator when you change a control.':id==='staff-access'?'Invite staff, manage roles and resend account setup links.':id==='admin-settings'?'Admin access and configuration tools live here.':id==='fields'?'Save a field once. Choose it in any game to reuse its address and Directions link.':id==='games'?'Add fixtures, final scores and GameChanger links. Weather appears automatically from the saved field and game time.':id==='players'?'Manage the season roster, permanent player profiles, jersey history and roster imports from one place.':id==='stats'?'Choose the season and Regular Season / Playoffs once, then manage player statistics and imports.':id==='media'?'Upload galleries and videos, manage featured homepage media and keep social content organized.':id==='channels'?'Arrange YouTube, Instagram, GameChanger and future platforms in one place.':id==='weeklyAwards'?'Publish one or two weekly winners, their featured stats and the finished social graphic.':id==='spotlights'?'Keep optional game highlights separate from the weekly awards system.':id==='settings'?'Edit homepage branding, league links, contact details and public website copy.':'Manage this part of the club website. Changes stay in draft until you choose Save & publish.';
 const config={
  gameRecaps:[['gameId','Connect this recap to a scheduled game','games'],['title','Article headline'],['date','Game date','date'],['opponent','Opponent name'],['ourScore','Dodgers final score','number-null'],['theirScore','Opponent final score','number-null'],['source','GameChanger source link','url'],['summary','Short introduction','textarea'],['body','Paste the full recap here','textarea'],['lineScore','Inning scores: paste a table with column headings','textarea'],['boxScore','Batting / pitching box score: paste from GameChanger','textarea'],['image','Cover photo or graphic','image'],['author','Credit / byline'],['published','Show on website after Save & publish','checkbox']],
  settings:[['teamName','Team name'],['founded','Established year'],['tagline','Hero eyebrow'],['heroTitle','Hero headline','textarea'],['heroText','Hero introduction','textarea'],['heroImage','Hero photo','image'],['shareImage','Link preview team photo (wide landscape)','image'],['seoTitle','Google homepage title'],['seoDescription','Google homepage description','textarea'],['logo','Compact logo','image'],['scriptLogo','Script logo','image'],['leagueName','League name'],['leagueLogo','League logo','image'],['leagueJoinUrl','PrimeTime team registration URL','url'],['instagram','Instagram URL','url'],['youtube','YouTube URL','url'],['contactEmail','Public contact email','email'],['applicationEmail','Player application contact email','email'],['currentSeason','Default season','seasons'],['championshipTitle','Championship title'],['championshipText','Championship story','textarea'],['championshipImage','Championship photo','image'],['tryoutsTitle','Tryouts headline'],['tryoutsText','Tryouts details','textarea'],['tryoutsLink','Tryouts contact / registration URL','url'],['sponsorTitle','Sponsor headline'],['sponsorText','Sponsor invitation','textarea'],['footerText','Footer text'],['creatorName','Website credit name'],['creatorUrl','Website credit URL','url']],
@@ -168,7 +168,7 @@ function drawDashboard(){
     ${next?`<div class="hq-next"><div class="hq-next-row">${hqMark(hqTeam(next.opponent))}<div><b>${next.home?'vs':'@'} ${esc(hqTeam(next.opponent)?.name||'Opponent')}</b><small>${pair.length>1?'Doubleheader · ':''}${pair.map(g=>hqTime(g.rescheduledTime||g.time)).join(' and ')} · ${esc(data.fields.find(f=>f.id===next.field)?.name||'Field TBD')}</small></div></div><div class="hq-btns"><button type="button" class="hq-sm" data-hq-go="games">Edit game</button><button type="button" class="hq-sm" data-hq-go="graphic-generator">Make a graphic</button></div></div>`:'<p class="hq-empty">Nothing scheduled. Add the next game in Games & Scores.</p>'}
    </div>
    <div class="hq-panel"><div class="hq-panel-h"><h2>Quick add</h2></div>
-    <div class="hq-quick"><button type="button" class="hq-sm" data-hq-score="">Final score</button><button type="button" class="hq-sm" data-hq-go="media">Photos or video</button><button type="button" class="hq-sm" data-hq-go="stats">Import stats</button><button type="button" class="hq-sm" data-hq-recap="">Paste recap</button><button type="button" class="hq-sm" data-hq-go="weeklyAwards">Player of the Week</button><button type="button" class="hq-sm" data-hq-go="games">Add a game</button></div>
+    <div class="hq-quick"><button type="button" class="hq-sm" data-hq-score="">Final score</button><button type="button" class="hq-sm" data-hq-go="media">Photos or video</button><button type="button" class="hq-sm" data-hq-go="stats">Import stats</button><button type="button" class="hq-sm" data-hq-recap="">Paste recap</button><button type="button" class="hq-sm" data-hq-go="weeklyAwards">Player of the Week</button><button type="button" class="hq-sm" data-hq-go="games">Add a game</button><button type="button" class="hq-sm hq-wide-btn" data-hq-notify>Email subscribers</button></div>
    </div>
   </div>
  </section>`;
@@ -176,6 +176,7 @@ function drawDashboard(){
  document.querySelectorAll('[data-hq-go]').forEach(b=>b.onclick=()=>navToSection(b.dataset.hqGo));
  document.querySelectorAll('[data-hq-score]').forEach(b=>b.onclick=()=>openScoreSheet(b.dataset.hqScore));
  document.querySelectorAll('[data-hq-recap]').forEach(b=>b.onclick=()=>openRecapPaste(b.dataset.hqRecap));
+ document.querySelector('[data-hq-notify]')?.addEventListener('click',()=>openNotify());
  document.querySelectorAll('[data-hq-dismiss]').forEach(b=>b.onclick=()=>{hqDismiss(b.dataset.hqDismiss);drawDashboard()});
  document.querySelector('[data-hq-undismiss]')?.addEventListener('click',()=>{try{localStorage.removeItem('jd-hq-dismissed')}catch{}drawDashboard()});
  document.querySelector('[data-hq-save]')?.addEventListener('click',async()=>{await save();drawDashboard()});
@@ -254,6 +255,7 @@ function openRecapPaste(gameId){
     <div class="hq-rc-out" data-out="${i}"></div>
     <details class="hq-more"><summary>Add inning-by-inning score (optional)</summary><textarea class="hq-line" data-line="${i}" rows="3" placeholder="Team	1	2	3	4	5	6	7	R	H	E">${esc(lines[i])}</textarea></details>
    </section>`).join('')}
+   <label class="hq-check"><input type="checkbox" id="hq-rc-email" checked> Email subscribers when it's published</label>
    <p class="hq-hint">The headline, intro and story fill in from what you paste. The score comes from the game in your schedule. Publishing puts it on the website right away${slots.length>1?' as one story':''}.${dirty?' Your other unpublished changes will be published too.':''}</p>
   </div>
   <div class="hq-sheet-f"><p class="form-message" role="status"></p><button type="button" data-x>Cancel</button><button type="submit" class="button" id="hq-rc-pub">Publish recap</button></div></form>`;
@@ -285,9 +287,79 @@ function openRecapPaste(gameId){
    const ok=contentSchema.safeParse(candidate);if(!ok.success){msg.textContent=ok.error.issues.map(i=>i.path.join('.')+': '+i.message).join('; ');return}
    data=ok.data;setDirty();$('#hq-rc-pub').disabled=true;msg.textContent='Publishing…';await save();
    if(dirty){msg.textContent='Could not publish. Check the message at the top and try again.';$('#hq-rc-pub').disabled=false;return}
-   sheet.close();message(slots.length>1?'Doubleheader recap published as one story.':'Recap published.');if(section==='dashboard')drawDashboard();else draw()};
+   const wantEmail=$('#hq-rc-email')?.checked;sheet.close();message(slots.length>1?'Doubleheader recap published as one story.':'Recap published.');
+   if(wantEmail){const pre=hqStoryPreset();if(pre)hqSendUpdate(pre).then(r=>message(`${slots.length>1?'Doubleheader recap':'Recap'} published and emailed to ${r.sent} subscriber${r.sent===1?'':'s'}.`)).catch(err=>message('Recap published, but the email did not send: '+err.message,true))}if(section==='dashboard')drawDashboard();else draw()};
  };
  paint();sheet.showModal();
+}
+
+/* ---------- Email subscribers ---------- */
+let hqSubCount=null;
+async function hqLoadSubs(){try{const r=await request('/api/admin/subscribers');hqSubCount=r.count;return r}catch(e){return {error:e.message,count:0,subscribers:[],configured:false}}}
+function hqStoryPreset(){
+ const recs=(data.gameRecaps||[]).filter(r=>r.published).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+ const r=recs[0];if(!r)return null;
+ const g=data.games.find(x=>x.id===r.gameId);
+ const same=g?recs.filter(x=>{const gg=data.games.find(y=>y.id===x.gameId);return gg&&gg.date===g.date&&gg.opponent===g.opponent}):[r];
+ const games=same.map(x=>data.games.find(y=>y.id===x.gameId)).filter(Boolean);
+ const opp=hqTeam(g?.opponent)?.name||r.opponent||'Opponent';
+ if(same.length>1){const res=games.map(x=>x.ourScore>x.theirScore?'W':x.ourScore<x.theirScore?'L':'T');const title=res.every(x=>x==='W')?`Dodgers sweep the ${opp}`:res.every(x=>x==='L')?`${opp} take both games from the Dodgers`:`Dodgers split a doubleheader with the ${opp}`;return {kind:'recap',kicker:'Doubleheader recap',title,text:games.map((x,i)=>`Game ${i+1}: Dodgers ${x.ourScore}, ${opp} ${x.theirScore}`).join('\n')+'\n'+(same[0].summary||''),url:`/recaps/${same[0].id}/`,cta:'Read the recap',image:same.find(x=>x.image)?.image||''}}
+ return {kind:'recap',kicker:'Game recap',title:r.title,text:(g&&g.status==='final'?`Final: Dodgers ${g.ourScore}, ${opp} ${g.theirScore}\n`:'')+(r.summary||''),url:`/recaps/${r.id}/`,cta:'Read the recap',image:r.image||''};
+}
+function hqNextGamePreset(){
+ const today=etToday(),up=data.games.filter(g=>['scheduled','live'].includes(g.status)&&(g.rescheduledDate||g.date)>=today).sort((a,b)=>dashboardGameDate(a).localeCompare(dashboardGameDate(b)));
+ const g=up[0];if(!g)return null;const pair=up.filter(x=>(x.rescheduledDate||x.date)===(g.rescheduledDate||g.date)&&x.opponent===g.opponent),f=data.fields.find(x=>x.id===g.field),opp=hqTeam(g.opponent)?.name||'Opponent';
+ return {kind:'next-game',kicker:'Next game',title:`${pair.length>1?'Doubleheader':'Next up'}: ${g.home?'vs':'at'} ${opp}`,text:`${hqDate(g.rescheduledDate||g.date)} · ${pair.map(x=>hqTime(x.rescheduledTime||x.time)).join(' and ')}\n${f?f.name+(f.address?' · '+f.address:''):'Field to be announced'}`,url:`/game/${g.id}/`,cta:'Game details',image:''};
+}
+function hqPhotosPreset(){
+ const ph=data.media.filter(m=>m.published!==false&&m.category!=='Video'&&m.image).sort((a,b)=>(Date.parse(b.date)||0)-(Date.parse(a.date)||0));
+ if(!ph.length)return null;const album=String(ph[0].title||'').split(' · ')[0],n=ph.filter(m=>String(m.title||'').split(' · ')[0]===album).length;
+ return {kind:'photos',kicker:'New photos',title:`${album}: ${n} new photo${n===1?'':'s'}`,text:ph[0].photographerName?`Photos by ${ph[0].photographerName}.`:'See the full gallery on the website.',url:'/media/',cta:'See the photos',image:ph[0].image};
+}
+function hqScorePreset(g){const opp=hqTeam(g.opponent)?.name||'Opponent',w=g.ourScore>g.theirScore;return {kind:'score',kicker:'Final score',title:`Final: Dodgers ${g.ourScore}, ${opp} ${g.theirScore}`,text:w?`The Dodgers beat the ${opp}.`:g.ourScore===g.theirScore?`The Dodgers and the ${opp} finished tied.`:`The ${opp} won this one.`,url:`/game/${g.id}/`,cta:'See the game',image:''}}
+async function hqSendUpdate(m){return request('/api/admin/notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(m)})}
+function openNotify(preset){
+ let sheet=$('#hq-notify');if(!sheet){sheet=document.createElement('dialog');sheet.id='hq-notify';sheet.className='hq-sheet hq-wide';document.body.append(sheet)}
+ const presets={story:hqStoryPreset(),game:hqNextGamePreset(),photos:hqPhotosPreset(),custom:{kind:'news',kicker:'Team news',title:'',text:'',url:'/',cta:'See it on the website',image:''}};
+ let cur=preset&&typeof preset==='object'?preset:(presets[preset]||presets.story||presets.custom);
+ const paint=async()=>{
+  sheet.innerHTML=`<form id="hq-notify-form" method="dialog"><div class="hq-sheet-h"><div><span class="eyebrow">EMAIL SUBSCRIBERS</span><h2>Send an update</h2></div><button type="button" class="hq-x" data-x aria-label="Close">×</button></div>
+  <div class="hq-sheet-b">
+   <div class="hq-chips">${[['story','Latest recap'],['game','Next game'],['photos','New photos'],['custom','Write my own']].filter(([k])=>presets[k]).map(([k,l])=>`<button type="button" class="hq-chip" data-preset="${k}" aria-pressed="${presets[k]===cur}">${l}</button>`).join('')}</div>
+   <label class="hq-field">Small label<input id="hq-n-kicker" value="${esc(cur.kicker||'')}" maxlength="60"></label>
+   <label class="hq-field">Headline<input id="hq-n-title" value="${esc(cur.title||'')}" maxlength="160" required></label>
+   <label class="hq-field">Message<textarea id="hq-n-text" rows="5" maxlength="4000">${esc(cur.text||'')}</textarea></label>
+   <div class="hq-two"><label class="hq-field">Link on the website<input id="hq-n-url" value="${esc(cur.url||'/')}"></label><label class="hq-field">Button text<input id="hq-n-cta" value="${esc(cur.cta||'See it on the website')}" maxlength="40"></label></div>
+   ${cur.image?`<div class="hq-n-img"><img src="${esc(cur.image)}" alt=""><label class="hq-check"><input type="checkbox" id="hq-n-useimg" checked> Include this picture</label></div>`:''}
+   <p class="hq-hint" id="hq-n-count">Checking subscribers…</p>
+  </div>
+  <div class="hq-sheet-f"><p class="form-message" role="status"></p><button type="button" data-x>Cancel</button><button type="submit" class="button" id="hq-n-send">Send email</button></div></form>`;
+  sheet.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>sheet.close());
+  sheet.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{cur=presets[b.dataset.preset];paint()});
+  const info=await hqLoadSubs(),countEl=$('#hq-n-count'),send=$('#hq-n-send');
+  if(countEl){countEl.textContent=info.error?info.error:!info.configured?'Email sending is not set up in Netlify yet (RESEND_API_KEY and JERSEY_DODGERS_FROM).':info.count?`This goes to ${info.count} subscriber${info.count===1?'':'s'} right away.`:'No subscribers yet. People can sign up at the bottom of every page on the website.';if(send){send.textContent=info.count?`Send to ${info.count}`:'Send email';send.disabled=!info.count||!info.configured}}
+  $('#hq-notify-form').onsubmit=async e=>{e.preventDefault();const msg=sheet.querySelector('.form-message');const m={kind:cur.kind||'news',kicker:$('#hq-n-kicker').value.trim(),title:$('#hq-n-title').value.trim(),text:$('#hq-n-text').value.trim(),url:$('#hq-n-url').value.trim()||'/',cta:$('#hq-n-cta').value.trim(),image:cur.image&&$('#hq-n-useimg')?.checked?cur.image:''};
+   if(!m.title){msg.textContent='Add a headline.';return}
+   send.disabled=true;msg.textContent='Sending…';
+   try{const r=await hqSendUpdate(m);sheet.close();message(r.failed?`Sent to ${r.sent}. ${r.failed} could not be sent; check Resend.`:`Email sent to ${r.sent} subscriber${r.sent===1?'':'s'}.`,Boolean(r.failed))}catch(err){msg.textContent=err.message;send.disabled=false}};
+ };
+ paint();sheet.showModal();
+}
+async function drawSubscribers(){
+ $('#section-content').innerHTML='<div class="jd-plugin-loading">Loading subscribers…</div>';
+ const info=await hqLoadSubs();if(section!=='subscribers')return;
+ const list=info.subscribers||[];
+ $('#section-content').innerHTML=`<section class="hq">
+  ${info.error?`<div class="hq-panel"><p class="hq-empty">${esc(info.error)}</p></div>`:''}
+  ${!info.error&&!info.configured?'<div class="hq-panel"><p class="hq-empty">Email sending is not set up yet. Add RESEND_API_KEY and JERSEY_DODGERS_FROM in Netlify → Site configuration → Environment variables (the same ones your form emails use).</p></div>':''}
+  <div class="hq-kpis"><div class="hq-panel hq-kpi"><small>Subscribers</small><b>${list.length}</b><em>Sign-up form is at the bottom of every page</em></div></div>
+  <div class="hq-panel"><div class="hq-panel-h"><h2>Send an update</h2></div><div class="hq-quick"><button type="button" class="hq-sm" data-n="story">Latest recap</button><button type="button" class="hq-sm" data-n="game">Next game</button><button type="button" class="hq-sm" data-n="photos">New photos</button><button type="button" class="hq-sm" data-n="custom">Write my own</button></div><p class="hq-hidden">Game-day reminders go out automatically around 6 PM the evening before each game.</p></div>
+  <div class="hq-panel"><div class="hq-panel-h"><h2>Subscriber list</h2><form id="hq-add-sub" class="hq-inline"><input type="email" id="hq-add-email" placeholder="Add an email" required><button type="submit" class="hq-sm">Add</button></form></div>
+   ${list.length?`<div class="hq-subs">${list.map(s=>`<div class="hq-sub-row"><span>${esc(s.email)}</span><small>${esc(String(s.created||'').slice(0,10))}</small><button type="button" class="hq-dismiss" data-unsub="${esc(s.key)}" aria-label="Remove ${esc(s.email)}" title="Remove">×</button></div>`).join('')}</div>`:'<p class="hq-empty">No subscribers yet.</p>'}
+  </div></section>`;
+ document.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>openNotify(b.dataset.n));
+ document.querySelectorAll('[data-unsub]').forEach(b=>b.onclick=async()=>{const row=b.closest('.hq-sub-row');if(b.dataset.confirm!=='1'){b.dataset.confirm='1';b.textContent='Remove?';b.classList.add('is-confirm');return}try{await request('/api/admin/subscribers?key='+encodeURIComponent(b.dataset.unsub),{method:'DELETE'});row.remove();message('Subscriber removed.')}catch(e){message(e.message,true)}});
+ $('#hq-add-sub').onsubmit=async e=>{e.preventDefault();try{await request('/api/admin/subscribers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('#hq-add-email').value})});message('Subscriber added.');drawSubscribers()}catch(err){message(err.message,true)}};
 }
 
 function openScoreSheet(gameId){
@@ -304,6 +376,7 @@ function openScoreSheet(gameId){
    <div class="hq-sheet-b">${g?`<label class="hq-field">Game<select id="hq-game">${[...new Set([g,...all])].map(x=>`<option value="${esc(x.id)}" ${x.id===g.id?'selected':''}>${esc(label(x))}</option>`).join('')}</select></label>
    <div class="hq-scores"><label class="hq-field">${esc(data.settings.teamName)}<input id="hq-us" type="number" inputmode="numeric" min="0" max="200" required value="${g.ourScore??''}"></label><span>–</span><label class="hq-field">${esc(opp?.name||'Opponent')}<input id="hq-them" type="number" inputmode="numeric" min="0" max="200" required value="${g.theirScore??''}"></label></div>
    <label class="hq-field">GameChanger link (optional)<input id="hq-gc" type="url" placeholder="https://web.gc.com/teams/…" value="${esc(g.gameLink||'')}"></label>
+   <label class="hq-check"><input type="checkbox" id="hq-sc-email"> Email subscribers the final score</label>
    <p class="hq-hint">Publishing updates the scoreboard, schedule and standings right away.${dirty?' Your other unpublished changes will be published too.':''}</p>`:'<p class="hq-hint">There are no unscored games right now.</p>'}</div>
    <div class="hq-sheet-f"><p class="form-message" role="status"></p><button type="button" id="hq-cancel">Cancel</button>${g?'<button type="submit" class="button" id="hq-publish">Publish score</button>':''}</div></form>`;
   $('#hq-sheet-close').onclick=$('#hq-cancel').onclick=()=>sheet.close();
@@ -312,7 +385,7 @@ function openScoreSheet(gameId){
    if(!Number.isInteger(ours)||!Number.isInteger(theirs)||$('#hq-us').value===''||$('#hq-them').value===''){msg.textContent='Enter both scores as whole numbers.';return}
    const candidate=structuredClone(data),target=candidate.games.find(x=>x.id===g.id);target.status='final';target.ourScore=ours;target.theirScore=theirs;const link=$('#hq-gc').value.trim();if(link)target.gameLink=link;if(!/^JDMETA:/.test(target.statusReason||''))target.statusReason='';
    const parsed=contentSchema.safeParse(candidate);if(!parsed.success){msg.textContent=parsed.error.issues.map(i=>i.message).join('; ');return}
-   data=parsed.data;setDirty();$('#hq-publish').disabled=true;msg.textContent='Publishing…';await save();if(dirty){msg.textContent='Could not publish. Check the message at the top and try again.';$('#hq-publish').disabled=false;return}sheet.close();if(section==='dashboard')drawDashboard();message(`Final published: ${data.settings.teamName} ${ours}, ${hqTeam(g.opponent)?.name||'Opponent'} ${theirs}.`)};
+   data=parsed.data;setDirty();$('#hq-publish').disabled=true;msg.textContent='Publishing…';await save();if(dirty){msg.textContent='Could not publish. Check the message at the top and try again.';$('#hq-publish').disabled=false;return}const wantEmail=$('#hq-sc-email')?.checked;sheet.close();if(section==='dashboard')drawDashboard();if(wantEmail){const gg=data.games.find(x=>x.id===g.id);hqSendUpdate(hqScorePreset(gg)).then(r=>message(`Final published and emailed to ${r.sent} subscriber${r.sent===1?'':'s'}.`)).catch(err=>message('Final published, but the email did not send: '+err.message,true))}message(`Final published: ${data.settings.teamName} ${ours}, ${hqTeam(g.opponent)?.name||'Opponent'} ${theirs}.`)};
  };
  paint();sheet.showModal();setTimeout(()=>$('#hq-us')?.focus(),30);
 }
@@ -345,6 +418,7 @@ function drawSection(){
  if(section==='graphic-generator'){$('#section-content').innerHTML='<div class="jd-plugin-loading">Loading Graphic Generator…</div>';openAdminPlugin('JDGraphicGenerator','open','Graphic Generator');return}
  if(section==='staff-access'){$('#section-content').innerHTML='<div class="jd-plugin-loading">Loading Staff Access…</div>';openAdminPlugin('JDStaffAccess','open','Staff Access');return}
  if(section==='admin-settings'){drawAdminSettings();return}
+ if(section==='subscribers'){drawSubscribers();return}
  if(section==='weeklyAwards'){drawWeeklyAwards();return}
  if(section==='settings'){$('#section-content').innerHTML='<div class="jd-section-intro-card"><div><span class="eyebrow">PUBLIC WEBSITE</span><h2>Homepage & site content</h2><p>Branding, hero content, league links, contact details and homepage feature copy are grouped inside one organized editor.</p></div><button class="button" id="edit-settings">Edit website content</button></div><div class="settings-summary"><img src="'+esc(data.settings.heroImage)+'" alt="Current hero"><div><span class="eyebrow">CURRENT HOMEPAGE</span><h2>'+esc(data.settings.teamName)+'</h2><p>'+esc(data.settings.heroTitle)+'</p><p>'+esc(data.settings.heroText)+'</p></div></div>';$('#edit-settings').onclick=()=>edit(data.settings);return}
  if(section==='standings'){$('#section-content').innerHTML='<div class="jd-plugin-loading" role="status">Loading standings…</div>';return}

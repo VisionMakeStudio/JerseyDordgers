@@ -493,3 +493,16 @@ dialog::backdrop{background:rgba(3,10,22,.85)}
 .dh-game{display:grid;gap:14px;padding-top:18px;border-top:1px solid var(--line)}
 .dh-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .dh-title{font-family:var(--display);font-weight:800;font-size:30px;text-transform:uppercase;line-height:1}
+
+/* email updates band */
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.sub-band{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:20px;align-items:center;padding-bottom:22px;margin-bottom:22px;border-bottom:1px solid var(--night-line)}
+@media (max-width:760px){.sub-band{grid-template-columns:1fr}}
+.sub-tx{display:grid;gap:4px}
+.sub-tx .lbl{color:var(--sky)}
+.sub-tx b{font-family:var(--display);font-weight:900;font-size:clamp(26px,3vw,34px);text-transform:uppercase;line-height:1;color:var(--night-fg)}
+.sub-tx small{color:var(--night-muted);font-size:14px}
+.subform{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+.subform input[type=email]{min-width:0;border:1px solid var(--night-line);background:var(--night-2);color:var(--night-fg);border-radius:6px;padding:12px 14px;font:inherit;font-size:15px}
+.subform input[type=email]::placeholder{color:var(--night-muted)}
+.sub-msg{grid-column:1/-1;color:var(--sky);font-size:13px;min-height:1em}
