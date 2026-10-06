@@ -3,16 +3,17 @@ import {login,logout,getUser,handleAuthCallback,acceptInvite,updateUser,requestP
 import {contentSchema} from './schema.mjs';
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let data,revision,section='dashboard',dirty=false,busy=false,shellReady=false,dashboardSeason='';const root=$('#admin-root');
-const labels={gameRecaps:'Game Recaps',dashboard:'Dashboard',settings:'Homepage & site',seasons:'Seasons',fields:'Saved fields',teams:'Opponents & teams',games:'Schedule & scores',players:'Roster & players',stats:'Player statistics',standings:'Standings',weeklyAwards:'Players of the Week',spotlights:'Game highlights',media:'Photos, videos & social',channels:'Watch & follow links',achievements:'Trophy case',sponsors:'Sponsors','graphic-generator':'Graphic Generator','admin-settings':'Admin settings','staff-access':'Staff Access'};
+const labels={gameRecaps:'Game Recaps',dashboard:'Today',settings:'Homepage & site',seasons:'Seasons',fields:'Saved fields',teams:'Opponents & teams',games:'Schedule & scores',players:'Roster & players',stats:'Player statistics',standings:'Standings',weeklyAwards:'Players of the Week',spotlights:'Game highlights',media:'Photos, videos & social',channels:'Watch & follow links',achievements:'Trophy case',sponsors:'Sponsors','graphic-generator':'Graphic Generator','admin-settings':'Admin settings','staff-access':'Staff Access'};
 const adminGroups=[
- {id:'dashboard',label:'Dashboard',sections:[['dashboard','Overview']]},
- {id:'team',label:'Team',sections:[['players','Roster & players'],['teams','Opponents'],['fields','Fields']]},
- {id:'stats',label:'Seasons & Stats',sections:[['seasons','Seasons'],['stats','Player stats'],['standings','Standings']]},
- {id:'content',label:'Content',sections:[['gameRecaps','Game Recaps'],['weeklyAwards','Players of the Week'],['spotlights','Game highlights'],['media','Media'],['channels','Watch & follow'],['achievements','Trophy case'],['sponsors','Sponsors']]},
- {id:'graphic',label:'Graphic Generator',sections:[['graphic-generator','Graphic Generator']]},
- {id:'website',label:'Website',sections:[['settings','Homepage & site'],['games','Schedule & scores']]},
- {id:'settings',label:'Settings',sections:[['admin-settings','Overview'],['staff-access','Staff Access']]}
+ {id:'dashboard',label:'Today',sections:[['dashboard','Today']]},
+ {id:'games',label:'Games & Scores',sections:[['games','Schedule & scores'],['standings','Standings'],['seasons','Seasons'],['teams','Opponents'],['fields','Fields']]},
+ {id:'team',label:'Roster & Stats',sections:[['players','Roster'],['stats','Player stats']]},
+ {id:'content',label:'Stories & Media',sections:[['gameRecaps','Recaps'],['media','Photos & video'],['weeklyAwards','Players of the Week'],['achievements','Trophy case'],['sponsors','Sponsors'],['spotlights','Highlights']]},
+ {id:'graphic',label:'Graphics',sections:[['graphic-generator','Graphic Generator']]},
+ {id:'settings',label:'Site & Settings',sections:[['settings','Homepage & site'],['channels','Social links'],['staff-access','Staff access'],['admin-settings','Overview']]}
 ];
+const groupIcons={dashboard:'<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',games:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',team:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.6c2.6.2 4.6 2 5.3 5"/>',content:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>',graphic:'<path d="M12 3l2.6 5.6 6.1.7-4.5 4.1 1.2 6L12 16.4 6.6 19.4l1.2-6L3.3 9.3l6.1-.7z"/>',settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/>'};
+const groupIcon=id=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${groupIcons[id]||''}</svg>`;
 const groupForSection=id=>adminGroups.find(group=>group.sections.some(([key])=>key===id))||adminGroups[0];
 const helpForSection=id=>id==='dashboard'?'Everything that needs your attention, without digging through every Admin page.':id==='graphic-generator'?'Create Player of the Week graphics without leaving the generator when you change a control.':id==='staff-access'?'Invite staff, manage roles and resend account setup links.':id==='admin-settings'?'Admin access and configuration tools live here.':id==='fields'?'Save a field once. Choose it in any game to reuse its address and Directions link.':id==='games'?'Add fixtures, final scores and GameChanger links. Weather appears automatically from the saved field and game time.':id==='players'?'Manage the season roster, permanent player profiles, jersey history and roster imports from one place.':id==='stats'?'Choose the season and Regular Season / Playoffs once, then manage player statistics and imports.':id==='media'?'Upload galleries and videos, manage featured homepage media and keep social content organized.':id==='channels'?'Arrange YouTube, Instagram, GameChanger and future platforms in one place.':id==='weeklyAwards'?'Publish one or two weekly winners, their featured stats and the finished social graphic.':id==='spotlights'?'Keep optional game highlights separate from the weekly awards system.':id==='settings'?'Edit homepage branding, league links, contact details and public website copy.':'Manage this part of the club website. Changes stay in draft until you choose Save & publish.';
 const config={
@@ -69,8 +70,8 @@ document.addEventListener('keydown',e=>{
 });
 function ensureAdminShell(){
  if(shellReady&&$('#admin-shell'))return;
- const groups=adminGroups.map(item=>`<button type="button" data-admin-group="${item.id}" class="admin-group-button"><span>${esc(item.label)}</span></button>`).join('');
- root.innerHTML=`<div class="admin-layout phase1-admin" id="admin-shell"><button type="button" id="admin-menu-backdrop" aria-label="Close admin menu" tabindex="-1" hidden></button><aside class="admin-nav" id="admin-nav"><div class="admin-mobile-head"><span>CLUBHOUSE ADMIN</span><button type="button" id="admin-menu-close">Close</button></div><div class="admin-nav-title"><span>JERSEY DODGERS</span><strong>Clubhouse</strong></div><nav class="admin-group-nav" aria-label="Admin sections">${groups}</nav><div class="admin-nav-footer"><a class="admin-mobile-site" href="/" target="_blank" rel="noopener">View website</a><button type="button" class="admin-mobile-signout" id="admin-mobile-logout">Sign out</button></div></aside><section class="admin-work"><div class="admin-heading"><div><span class="eyebrow" id="admin-heading-eyebrow"></span><h1 id="admin-heading-title"></h1></div><div><span id="save-state"></span><button type="button" class="button" id="save-all">Save & publish</button></div></div><nav class="admin-subnav" id="admin-subnav"></nav><div class="admin-help" id="admin-help"></div><div id="section-content"></div></section></div>`;
+ const groups=adminGroups.map(item=>`<button type="button" data-admin-group="${item.id}" class="admin-group-button">${groupIcon(item.id)}<span>${esc(item.label)}</span>${item.id==='dashboard'?'<b class="hq-badge" id="hq-badge" hidden></b>':''}</button>`).join('');
+ root.innerHTML=`<div class="admin-layout phase1-admin" id="admin-shell"><button type="button" id="admin-menu-backdrop" aria-label="Close admin menu" tabindex="-1" hidden></button><aside class="admin-nav" id="admin-nav"><div class="admin-mobile-head"><span>DODGERS HQ</span><button type="button" id="admin-menu-close">Close</button></div><a class="admin-nav-title hq-brand" href="/" target="_blank" rel="noopener"><img src="/assets/d-mark.png" alt=""><span><strong>Dodgers HQ</strong><small>Team admin</small></span></a><nav class="admin-group-nav" aria-label="Admin sections">${groups}</nav><div class="admin-nav-footer"><a class="admin-mobile-site" href="/" target="_blank" rel="noopener">View website</a><button type="button" class="admin-mobile-signout" id="admin-mobile-logout">Sign out</button></div></aside><section class="admin-work"><div class="admin-heading"><div><span class="eyebrow" id="admin-heading-eyebrow"></span><h1 id="admin-heading-title"></h1></div><div><span id="save-state"></span><button type="button" class="button" id="save-all">Save & publish</button></div></div><nav class="admin-subnav" id="admin-subnav"></nav><div class="admin-help" id="admin-help"></div><div id="section-content"></div></section></div>`;
  shellReady=true;
  $('#save-all').onclick=save;
  document.querySelectorAll('[data-admin-group]').forEach(b=>b.onclick=()=>{closeAdminMenu();const target=adminGroups.find(g=>g.id===b.dataset.adminGroup)?.sections[0]?.[0];if(target)navToSection(target)});
@@ -105,24 +106,97 @@ function draw(){
  document.dispatchEvent(new CustomEvent('jd-admin-render',{detail:{section,group:groupForSection(section).id}}));
 }
 function dashboardGameDate(game){return `${game.rescheduledDate||game.date}T${game.rescheduledTime||game.time||'00:00'}`}
+/* ---------- Today (dashboard) ---------- */
+const etToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+const hqDate=d=>{try{return new Intl.DateTimeFormat('en-US',{weekday:'short',month:'short',day:'numeric',timeZone:'UTC'}).format(new Date(d+'T12:00:00Z'))}catch{return d}};
+const hqTime=t=>{if(!t)return '';const [h,m]=t.split(':');return `${Number(h)%12||12}:${m} ${Number(h)<12?'AM':'PM'}`};
+const hqTeam=id=>data.teams.find(t=>t.id===id);
+const hqMark=t=>t?.logo?`<img class="hq-mark" src="${esc(t.logo)}" alt="">`:`<span class="hq-mark hq-mono">${esc((t?.abbreviation||'?').slice(0,3))}</span>`;
+function hqNeeds(sid){
+ const today=etToday(),items=[];
+ const games=data.games.filter(g=>g.season===sid);
+ const pending=games.filter(g=>['scheduled','live'].includes(g.status)&&dashboardGameDate(g).slice(0,10)<today).sort((a,b)=>dashboardGameDate(a).localeCompare(dashboardGameDate(b)));
+ if(pending.length){const byDay={};pending.forEach(g=>{const k=(g.rescheduledDate||g.date)+'|'+g.opponent;(byDay[k]=byDay[k]||[]).push(g)});Object.values(byDay).forEach(list=>{const g=list[0];items.push({sev:'hi',title:`${hqDate(g.rescheduledDate||g.date)} ${list.length>1?'doubleheader ':''}${g.home?'vs':'@'} ${hqTeam(g.opponent)?.name||'Opponent'} needs ${list.length>1?'scores':'a score'}`,text:'The website still shows '+(list.length>1?'these games':'this game')+' as not played. Enter the final to update the scoreboard and standings.',action:`<button class="button hq-sm" type="button" data-hq-score="${esc(g.id)}">Enter ${list.length>1?'scores':'score'}</button>`})})}
+ const roster=(data.rosters||[]).filter(r=>r.season===sid&&r.active!==false).map(r=>data.players.find(p=>p.id===r.player)).filter(Boolean);
+ const noPhoto=roster.filter(p=>!p.photo);
+ if(noPhoto.length)items.push({sev:'mid',title:`${noPhoto.length} player${noPhoto.length>1?'s have':' has'} no photo`,text:noPhoto.slice(0,6).map(p=>p.name).join(', ')+(noPhoto.length>6?` and ${noPhoto.length-6} more`:''),action:'<button type="button" class="hq-sm" data-hq-go="players">Add photos</button>'});
+ const finals=games.filter(g=>g.status==='final');
+ const noRecap=finals.filter(g=>!(data.gameRecaps||[]).some(r=>r.gameId===g.id));
+ if(noRecap.length)items.push({sev:'mid',title:`${noRecap.length} final${noRecap.length>1?'s':''} without a recap`,text:noRecap.slice(0,3).map(g=>`${hqDate(g.date)} vs ${hqTeam(g.opponent)?.name||'Opponent'}`).join(' · '),action:'<button type="button" class="hq-sm" data-hq-go="gameRecaps">Write recap</button>'});
+ const ppd=games.filter(g=>g.status==='postponed'&&!g.rescheduledDate);
+ if(ppd.length)items.push({sev:'mid',title:`${ppd.length} postponed game${ppd.length>1?'s':''} need a new date`,text:ppd.map(g=>`${hqDate(g.date)} vs ${hqTeam(g.opponent)?.name||'Opponent'}`).join(' · '),action:'<button type="button" class="hq-sm" data-hq-go="games">Reschedule</button>'});
+ if(finals.length&&!(data.weeklyAwards||[]).some(a=>a.season===sid&&a.published))items.push({sev:'lo',title:'No Player of the Week yet this season',text:'The homepage hides this section until one is published.',action:'<button type="button" class="hq-sm" data-hq-go="weeklyAwards">Create</button>'});
+ return {items,pending};
+}
 function drawDashboard(){
  const valid=data.seasons.some(s=>s.id===dashboardSeason);if(!valid)dashboardSeason=sessionStorage.getItem('jd-admin-dashboard-season')||data.settings.currentSeason||data.seasons[0]?.id||'';
  if(!data.seasons.some(s=>s.id===dashboardSeason))dashboardSeason=data.settings.currentSeason||data.seasons[0]?.id||'';
- const sid=dashboardSeason,season=data.seasons.find(s=>s.id===sid),now=new Date();
- const explicit=(data.rosters||[]).filter(r=>r.season===sid&&r.active!==false),rosterCount=explicit.length||((data.stats||[]).filter(st=>st.season===sid).length?new Set((data.stats||[]).filter(st=>st.season===sid).map(st=>st.player)).size:data.players.filter(p=>p.active).length);
+ const sid=dashboardSeason,season=data.seasons.find(s=>s.id===sid),today=etToday();
+ const {items}=hqNeeds(sid);
+ const badge=$('#hq-badge');if(badge){const n=hqNeeds(data.settings.currentSeason).items.length;badge.hidden=!n;badge.textContent=n}
  const games=data.games.filter(g=>g.season===sid).slice().sort((a,b)=>dashboardGameDate(a).localeCompare(dashboardGameDate(b)));
- const nextGame=games.find(g=>['scheduled','live','postponed'].includes(g.status)&&new Date(dashboardGameDate(g))>=new Date(now.getTime()-12*60*60*1000))||games.find(g=>['scheduled','live','postponed'].includes(g.status));
- const latest=[...games].reverse().find(g=>g.status==='final');
- const opponent=id=>data.teams.find(t=>t.id===id)?.name||'Opponent';
- const potw=(data.weeklyAwards||[]).filter(a=>a.season===sid&&a.published).length;
- const publishedMedia=data.media.filter(m=>m.published).length,featuredMedia=data.media.filter(m=>m.published&&m.featured).length;
- const statsCount=new Set([...(data.stats||[]).filter(s=>s.season===sid).map(s=>s.player),...(data.playoffStats||[]).filter(s=>s.season===sid).map(s=>s.player)]).size;
- const fmt=d=>{if(!d)return 'Not scheduled';try{return new Date(`${d}T12:00:00`).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}catch{return d}};
- $('#section-content').innerHTML=`<section class="jd-dashboard"><div class="jd-dashboard-season"><div><span class="eyebrow">DASHBOARD SEASON</span><div class="jd-dashboard-season-line"><h2>${esc(season?.name||'No season')}</h2><label>View <select id="jd-dashboard-season">${data.seasons.map(s=>`<option value="${esc(s.id)}" ${s.id===sid?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label></div><p>${esc(season?.note||'Review any season without changing the public website default.')}</p></div><button type="button" data-dashboard-section="seasons">Manage seasons</button></div><div class="jd-dashboard-metrics"><article><span>ROSTER</span><strong>${rosterCount}</strong><small>${esc(season?.name||'season')} players</small></article><article><span>STAT PROFILES</span><strong>${statsCount}</strong><small>regular + playoffs</small></article><article><span>PLAYER OF THE WEEK</span><strong>${potw}</strong><small>published this season</small></article><article><span>MEDIA LIBRARY</span><strong>${publishedMedia}</strong><small>${featuredMedia} featured · all seasons</small></article></div><div class="jd-dashboard-grid"><article class="jd-dashboard-card jd-dashboard-game"><div class="jd-card-head"><span>UP NEXT</span><button type="button" data-dashboard-section="games">Schedule</button></div>${nextGame?`<div class="jd-game-date">${esc(fmt(nextGame.rescheduledDate||nextGame.date))}</div><h3>${nextGame.home?'vs':'@'} ${esc(opponent(nextGame.opponent))}</h3><p>${esc(nextGame.rescheduledTime||nextGame.time||'Time TBA')} · ${esc(nextGame.status==='postponed'?'Postponed / reschedule pending':nextGame.status)}</p>`:'<div class="jd-dashboard-empty">No upcoming game is currently scheduled for this season.</div>'}</article><article class="jd-dashboard-card jd-dashboard-result"><div class="jd-card-head"><span>LATEST RESULT</span><button type="button" data-dashboard-section="games">Scores</button></div>${latest?`<div class="jd-game-date">${esc(fmt(latest.date))}</div><h3>Dodgers <b>${latest.ourScore??'–'}</b> <span>—</span> ${esc(opponent(latest.opponent))} <b>${latest.theirScore??'–'}</b></h3><p>${latest.ourScore>latest.theirScore?'Win':latest.ourScore<latest.theirScore?'Loss':'Tie'}${latest.recap?` · ${esc(latest.recap.slice(0,110))}`:''}</p>`:'<div class="jd-dashboard-empty">No final result has been entered for this season yet.</div>'}</article><article class="jd-dashboard-card jd-dashboard-publish"><div class="jd-card-head"><span>PUBLISH STATUS</span></div><div class="jd-publish-state ${dirty?'draft':'live'}"><i></i><div><strong>${dirty?'Unpublished changes':'Website is current'}</strong><small>${dirty?'Review your edits, then use Save & publish.':'Admin data and public website are in sync.'}</small></div></div></article></div><div class="jd-dashboard-actions"><div class="jd-card-head"><span>QUICK ACTIONS</span></div><div><button class="button" type="button" data-dashboard-section="players">+ Add / manage player</button><button type="button" data-dashboard-section="stats">Enter statistics</button><button type="button" data-dashboard-section="weeklyAwards">Players of the Week</button><button type="button" data-dashboard-section="media">Upload media</button><button type="button" data-open-graphic>Graphic Generator</button></div></div></section>`;
+ const upcoming=games.filter(g=>['scheduled','live'].includes(g.status)&&dashboardGameDate(g).slice(0,10)>=today);
+ const next=upcoming[0],pair=next?upcoming.filter(g=>(g.rescheduledDate||g.date)===(next.rescheduledDate||next.date)&&g.opponent===next.opponent):[];
+ const finals=games.filter(g=>g.status==='final');
+ const usTeam=data.teams.find(t=>t.name===data.settings.teamName);
+ const st=data.standings.filter(s=>s.season===sid).sort((a,b)=>a.order-b.order),mine=st.find(s=>s.team===usTeam?.id),rank=mine?st.indexOf(mine)+1:0;
+ const w=finals.filter(g=>g.ourScore>g.theirScore).length,l=finals.filter(g=>g.ourScore<g.theirScore).length,t=finals.length-w-l;
+ const rec=mine?`${mine.w}-${mine.l}${mine.t?'-'+mine.t:''}`:`${w}-${l}${t?'-'+t:''}`;
+ const canc=games.filter(g=>g.status==='cancelled').length;
+ const roster=(data.rosters||[]).filter(r=>r.season===sid&&r.active!==false),withPhoto=roster.filter(r=>data.players.find(p=>p.id===r.player)?.photo).length;
+ const media=data.media.filter(m=>m.published!==false),vids=media.filter(m=>m.category==='Video').length;
+ const ord=n=>n+(['th','st','nd','rd'][(n%100-20)%10]||['th','st','nd','rd'][n%100]||'th');
+ $('#section-content').innerHTML=`<section class="hq">
+  <div class="hq-season"><label>Season <select id="jd-dashboard-season">${data.seasons.map(s=>`<option value="${esc(s.id)}" ${s.id===sid?'selected':''}>${esc(s.name)}</option>`).join('')}</select></label>${sid!==data.settings.currentSeason?'<span class="hq-note">Viewing a past season. The website still shows '+esc(data.seasons.find(s=>s.id===data.settings.currentSeason)?.name||'the current season')+'.</span>':''}</div>
+  <div class="hq-panel"><div class="hq-panel-h"><h2>Needs your attention</h2><span class="hq-pill ${items.length?'warn':'ok'}">${items.length?items.length+' item'+(items.length>1?'s':''):'All caught up'}</span></div>
+   ${items.length?`<div class="hq-todo">${items.map(i=>`<div class="hq-todo-i"><span class="hq-sev ${i.sev}"></span><div><b>${esc(i.title)}</b><small>${esc(i.text)}</small></div>${i.action}</div>`).join('')}</div>`:'<p class="hq-empty">Scores, photos and recaps are up to date.</p>'}
+  </div>
+  <div class="hq-kpis">
+   <div class="hq-panel hq-kpi"><small>Record</small><b>${esc(rec)}</b><em>${canc?canc+' game'+(canc>1?'s':'')+' cancelled':finals.length+' played'}</em></div>
+   <div class="hq-panel hq-kpi"><small>Standing</small><b>${rank?ord(rank):'—'}</b><em>${mine?(mine.gb&&mine.gb!=='-'?mine.gb+' GB':'First place'):'Not posted'}</em></div>
+   <div class="hq-panel hq-kpi"><small>Roster</small><b>${roster.length}</b><em>${withPhoto} with photos</em></div>
+   <div class="hq-panel hq-kpi"><small>Media</small><b>${media.length}</b><em>${vids} video${vids===1?'':'s'} · ${media.length-vids} photos</em></div>
+  </div>
+  <div class="hq-grid">
+   <div class="hq-panel"><div class="hq-panel-h"><h2>Next game</h2>${next?`<span class="hq-pill">${esc(hqDate(next.rescheduledDate||next.date))}</span>`:''}</div>
+    ${next?`<div class="hq-next"><div class="hq-next-row">${hqMark(hqTeam(next.opponent))}<div><b>${next.home?'vs':'@'} ${esc(hqTeam(next.opponent)?.name||'Opponent')}</b><small>${pair.length>1?'Doubleheader · ':''}${pair.map(g=>hqTime(g.rescheduledTime||g.time)).join(' and ')} · ${esc(data.fields.find(f=>f.id===next.field)?.name||'Field TBD')}</small></div></div><div class="hq-btns"><button type="button" class="hq-sm" data-hq-go="games">Edit game</button><button type="button" class="hq-sm" data-hq-go="graphic-generator">Make a graphic</button></div></div>`:'<p class="hq-empty">Nothing scheduled. Add the next game in Games & Scores.</p>'}
+   </div>
+   <div class="hq-panel"><div class="hq-panel-h"><h2>Quick add</h2></div>
+    <div class="hq-quick"><button type="button" class="hq-sm" data-hq-score="">Final score</button><button type="button" class="hq-sm" data-hq-go="media">Photos or video</button><button type="button" class="hq-sm" data-hq-go="stats">Import stats</button><button type="button" class="hq-sm" data-hq-go="gameRecaps">Write recap</button><button type="button" class="hq-sm" data-hq-go="weeklyAwards">Player of the Week</button><button type="button" class="hq-sm" data-hq-go="games">Add a game</button></div>
+   </div>
+  </div>
+ </section>`;
  $('#jd-dashboard-season')?.addEventListener('change',event=>{dashboardSeason=event.target.value;sessionStorage.setItem('jd-admin-dashboard-season',dashboardSeason);drawDashboard()});
- document.querySelectorAll('[data-dashboard-section]').forEach(b=>b.onclick=()=>navToSection(b.dataset.dashboardSection));
- document.querySelector('[data-open-graphic]')?.addEventListener('click',()=>navToSection('graphic-generator'));
+ document.querySelectorAll('[data-hq-go]').forEach(b=>b.onclick=()=>navToSection(b.dataset.hqGo));
+ document.querySelectorAll('[data-hq-score]').forEach(b=>b.onclick=()=>openScoreSheet(b.dataset.hqScore));
 }
+function openScoreSheet(gameId){
+ const today=etToday();
+ const choices=data.games.filter(g=>['scheduled','live','postponed'].includes(g.status)&&(g.rescheduledDate||g.date)<=today).sort((a,b)=>dashboardGameDate(b).localeCompare(dashboardGameDate(a)));
+ const all=choices.length?choices:data.games.filter(g=>g.status!=='cancelled').sort((a,b)=>dashboardGameDate(b).localeCompare(dashboardGameDate(a))).slice(0,12);
+ let g=data.games.find(x=>x.id===gameId)||all[0];
+ let sheet=$('#hq-sheet');
+ if(!sheet){sheet=document.createElement('dialog');sheet.id='hq-sheet';sheet.className='hq-sheet';document.body.append(sheet)}
+ const label=x=>`${hqDate(x.rescheduledDate||x.date)} · ${hqTime(x.rescheduledTime||x.time)} · ${x.home?'vs':'@'} ${hqTeam(x.opponent)?.name||'Opponent'}`;
+ const paint=()=>{
+  const opp=hqTeam(g?.opponent);
+  sheet.innerHTML=`<form id="hq-score-form" method="dialog"><div class="hq-sheet-h"><div><span class="eyebrow">ENTER FINAL SCORE</span><h2>${g?`${g.home?'vs':'@'} ${esc(opp?.name||'Opponent')}`:'No games to score'}</h2></div><button type="button" class="hq-x" id="hq-sheet-close" aria-label="Close">×</button></div>
+   <div class="hq-sheet-b">${g?`<label class="hq-field">Game<select id="hq-game">${[...new Set([g,...all])].map(x=>`<option value="${esc(x.id)}" ${x.id===g.id?'selected':''}>${esc(label(x))}</option>`).join('')}</select></label>
+   <div class="hq-scores"><label class="hq-field">${esc(data.settings.teamName)}<input id="hq-us" type="number" inputmode="numeric" min="0" max="200" required value="${g.ourScore??''}"></label><span>–</span><label class="hq-field">${esc(opp?.name||'Opponent')}<input id="hq-them" type="number" inputmode="numeric" min="0" max="200" required value="${g.theirScore??''}"></label></div>
+   <label class="hq-field">GameChanger link (optional)<input id="hq-gc" type="url" placeholder="https://web.gc.com/teams/…" value="${esc(g.gameLink||'')}"></label>
+   <p class="hq-hint">Publishing updates the scoreboard, schedule and standings right away.${dirty?' Your other unpublished changes will be published too.':''}</p>`:'<p class="hq-hint">There are no unscored games right now.</p>'}</div>
+   <div class="hq-sheet-f"><p class="form-message" role="status"></p><button type="button" id="hq-cancel">Cancel</button>${g?'<button type="submit" class="button" id="hq-publish">Publish score</button>':''}</div></form>`;
+  $('#hq-sheet-close').onclick=$('#hq-cancel').onclick=()=>sheet.close();
+  $('#hq-game')?.addEventListener('change',e=>{g=data.games.find(x=>x.id===e.target.value);paint()});
+  $('#hq-score-form').onsubmit=async e=>{e.preventDefault();if(!g)return;const ours=Number($('#hq-us').value),theirs=Number($('#hq-them').value),msg=sheet.querySelector('.form-message');
+   if(!Number.isInteger(ours)||!Number.isInteger(theirs)||$('#hq-us').value===''||$('#hq-them').value===''){msg.textContent='Enter both scores as whole numbers.';return}
+   const candidate=structuredClone(data),target=candidate.games.find(x=>x.id===g.id);target.status='final';target.ourScore=ours;target.theirScore=theirs;const link=$('#hq-gc').value.trim();if(link)target.gameLink=link;if(!/^JDMETA:/.test(target.statusReason||''))target.statusReason='';
+   const parsed=contentSchema.safeParse(candidate);if(!parsed.success){msg.textContent=parsed.error.issues.map(i=>i.message).join('; ');return}
+   data=parsed.data;setDirty();$('#hq-publish').disabled=true;msg.textContent='Publishing…';await save();if(dirty){msg.textContent='Could not publish. Check the message at the top and try again.';$('#hq-publish').disabled=false;return}sheet.close();if(section==='dashboard')drawDashboard();message(`Final published: ${data.settings.teamName} ${ours}, ${hqTeam(g.opponent)?.name||'Opponent'} ${theirs}.`)};
+ };
+ paint();sheet.showModal();setTimeout(()=>$('#hq-us')?.focus(),30);
+}
+
 function drawAdminSettings(){
  $('#section-content').innerHTML=`<section class="jd-admin-settings-overview"><div class="jd-settings-card"><span class="eyebrow">ACCESS</span><h2>Staff Access</h2><p>Invite coaches and media staff, change roles and send password setup links.</p><button class="button" type="button" data-open-staff>Manage staff access</button></div><div class="jd-settings-card"><span class="eyebrow">WEBSITE</span><h2>Branding & public details</h2><p>Team branding, league links, public contact information and homepage copy.</p><button type="button" data-dashboard-section="settings">Open website settings</button></div><div class="jd-settings-card"><span class="eyebrow">INTEGRATIONS</span><h2>Watch & Follow</h2><p>Manage GameChanger, YouTube, Instagram and any future team links.</p><button type="button" data-dashboard-section="channels">Manage integrations</button></div></section>`;
  document.querySelectorAll('[data-dashboard-section]').forEach(b=>b.onclick=()=>navToSection(b.dataset.dashboardSection));
